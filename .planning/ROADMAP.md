@@ -30,10 +30,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. App restores active workspaces on launch
   4. Terminal remains usable after app crashes (no raw mode corruption)
   5. All spawned processes clean up properly on exit (no zombies)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD
+- [ ] 01-01-PLAN.md — Project setup and configuration system (conf package)
+- [ ] 01-02-PLAN.md — State persistence with Jotai and FileSystem storage
+- [ ] 01-03-PLAN.md — Process lifecycle management (cleanup, signals, PTY)
+- [ ] 01-04-PLAN.md — Ink app shell with settings UI
 
 ### Phase 2: Workspace Management
 **Goal**: Users can create and manage isolated workspaces with git worktrees
@@ -103,7 +106,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/4 | Planned | - |
 | 2. Workspace Management | 0/TBD | Not started | - |
 | 3. Agent Integration | 0/TBD | Not started | - |
 | 4. UI/Navigation | 0/TBD | Not started | - |
