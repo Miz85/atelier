@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useAtom } from 'jotai';
+import { homedir } from 'node:os';
 import { workspacesAtom, repoPathAtom, activeWorkspaceIdAtom } from '../state/workspace.js';
 import { settingsAtom } from '../state/settings.js';
 import { createWorkspace } from '../workspace/workspace-manager.js';
@@ -40,11 +41,17 @@ export function CreateWorkspace({ onBack, onCreated }: CreateWorkspaceProps) {
   });
 
   const handleRepoSubmit = (value: string) => {
-    const trimmed = value.trim();
+    let trimmed = value.trim();
     if (!trimmed) {
       setError('Repository path is required');
       setStep('error');
       return;
+    }
+    // Expand ~ to home directory
+    if (trimmed.startsWith('~/')) {
+      trimmed = trimmed.replace('~', homedir());
+    } else if (trimmed === '~') {
+      trimmed = homedir();
     }
     setRepoPath(trimmed);
     setStep('branch');
