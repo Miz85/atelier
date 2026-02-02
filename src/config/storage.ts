@@ -82,6 +82,10 @@ export function createJotaiStorage<T>() {
     getItem: (key: string, initialValue: T): T => fsStorage.getItem(key, initialValue),
     setItem: (key: string, value: T): void => fsStorage.setItem(key, value),
     removeItem: (key: string): void => fsStorage.removeItem(key),
-    subscribe: fsStorage.subscribe.bind(fsStorage),
+    subscribe: (key: string, callback: (value: unknown) => void, initialValue: unknown): (() => void) => {
+      // For single-process CLI, no cross-process sync needed
+      // Return no-op unsubscribe
+      return () => {};
+    },
   };
 }
