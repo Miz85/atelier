@@ -55,6 +55,18 @@ export const activeWorkspaceAtom = atom((get) => {
 });
 
 /**
+ * Persisted atom for the current repository path.
+ * Set when user opens a repository.
+ * Used for git operations and workspace path computation.
+ */
+export const repoPathAtom = atomWithStorage<string | null>(
+  'repoPath',
+  null,
+  createJotaiStorage<string | null>(),
+  { getOnInit: true }
+);
+
+/**
  * Helper to set active workspace by ID.
  * Use this from components: setActiveWorkspace(set, workspaceId)
  */
