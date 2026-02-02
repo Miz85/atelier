@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Workspace Management
 
-- [ ] **WORK-01**: User can create workspace with branch name (creates git worktree + launches agent)
-- [ ] **WORK-02**: User can delete workspace (removes worktree, kills agent process)
-- [ ] **WORK-03**: User can list all workspaces with repo and branch info
-- [ ] **WORK-04**: User can switch between workspaces
+- [x] **WORK-01**: User can create workspace with branch name (creates git worktree + launches agent)
+- [x] **WORK-02**: User can delete workspace (removes worktree, kills agent process)
+- [x] **WORK-03**: User can list all workspaces with repo and branch info
+- [x] **WORK-04**: User can switch between workspaces
 
 ### Agent Integration
 
@@ -93,10 +93,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONF-02 | Phase 1 | Pending |
 | UI-04 | Phase 1 | Pending |
 | UI-05 | Phase 1 | Pending |
-| WORK-01 | Phase 2 | Pending |
-| WORK-02 | Phase 2 | Pending |
-| WORK-03 | Phase 2 | Pending |
-| WORK-04 | Phase 2 | Pending |
+| WORK-01 | Phase 2 | Complete |
+| WORK-02 | Phase 2 | Complete |
+| WORK-03 | Phase 2 | Complete |
+| WORK-04 | Phase 2 | Complete |
 | AGENT-01 | Phase 3 | Pending |
 | AGENT-02 | Phase 3 | Pending |
 | AGENT-03 | Phase 3 | Pending |

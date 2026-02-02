@@ -13,7 +13,7 @@ Build a terminal UI for orchestrating coding agents across isolated git worktree
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Core infrastructure with process management and state persistence
-- [ ] **Phase 2: Workspace Management** - Create and manage isolated git worktrees
+- [x] **Phase 2: Workspace Management** - Create and manage isolated git worktrees
 - [ ] **Phase 3: Agent Integration** - Spawn and interact with coding agents
 - [ ] **Phase 4: UI/Navigation** - Three-pane interface with keyboard navigation
 - [ ] **Phase 5: Git Integration** - Diff viewing, IDE integration, and PR management
@@ -56,7 +56,7 @@ Plans:
 - [x] 02-03-PLAN.md — Workspace manager (create, delete, sync)
 - [x] 02-04-PLAN.md — Workspace UI components (CreateWorkspace, WorkspaceList)
 - [x] 02-05-PLAN.md — App integration and verification
-- [ ] 02-06-PLAN.md — Gap closure: Wire syncWorkspacesFromGit into app lifecycle
+- [x] 02-06-PLAN.md — Gap closure: Wire syncWorkspacesFromGit into app lifecycle
 
 ### Phase 3: Agent Integration
 **Goal**: Users can spawn and interact with coding agents in workspaces
@@ -112,7 +112,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | 2026-02-02 |
-| 2. Workspace Management | 5/6 | Gap closure needed | - |
+| 2. Workspace Management | 6/6 | Complete | 2026-02-02 |
 | 3. Agent Integration | 0/TBD | Not started | - |
 | 4. UI/Navigation | 0/TBD | Not started | - |
 | 5. Git Integration | 0/TBD | Not started | - |
