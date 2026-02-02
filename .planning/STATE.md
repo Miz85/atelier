@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 2 of 5 (Workspace Management)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-02 — Completed 02-04-PLAN.md (Workspace UI Components)
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-02 — Completed 02-05-PLAN.md (App Integration)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 2.5 min
-- Total execution time: 0.35 hours
+- Total plans completed: 9
+- Average duration: 12.8 min
+- Total execution time: 1.9 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 4 | 13.0 min | 3.2 min |
-| 02-workspace-management | 4 | 8.4 min | 2.1 min |
+| 02-workspace-management | 5 | 97.4 min | 19.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (3.0m), 02-02 (1.0m), 02-03 (3.0m), 02-04 (1.4m)
-- Trend: Phase 2 averaging 2.1min, faster than Phase 1
+- Last 5 plans: 02-02 (1.0m), 02-03 (3.0m), 02-04 (1.4m), 02-05 (89.0m)
+- Note: 02-05 included human verification with 3 bug fixes, much longer than typical auto plans
 
 *Updated after each plan completion*
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - 02-02: Persist only workspace ID, not full object — Maintains single source of truth in workspacesAtom
 - 02-03: Use realpathSync for path resolution — Handles symlinks (e.g., /tmp → /private/tmp on macOS)
 - 02-03: Workspace manager returns objects, caller handles state updates — Separation of orchestration and state management
+- 02-05: Auto-detect repository default branch — Supports repos with non-standard default branches (main, master, preprod, develop)
+- 02-05: Expand tilde in user-entered paths — Prevents ENOENT errors from unresolved ~ character
+- 02-05: Return to main screen after workspace selection — Immediate feedback of active workspace change
 
 ### Pending Todos
 
@@ -71,11 +74,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 2 progressing smoothly.
+None - Phase 2 complete. Ready for Phase 3 (Agent Integration).
 
 ## Session Continuity
 
-Last session: 2026-02-02T21:21:42Z
-Stopped at: Completed 02-04-PLAN.md (Workspace UI Components)
+Last session: 2026-02-02T22:54:09Z
+Stopped at: Completed 02-05-PLAN.md (App Integration) - Phase 2 complete
 Resume file: None
-Next up: Continue Phase 2 plans (02-05 remaining - final plan of phase)
+Next up: Begin Phase 3 (Agent Integration) - workspace infrastructure ready
