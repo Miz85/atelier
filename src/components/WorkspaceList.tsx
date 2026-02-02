@@ -42,6 +42,7 @@ export function WorkspaceList({ onBack, onSelect }: WorkspaceListProps) {
       const workspace = workspaces[selectedIndex];
       setActiveId(workspace.id);
       onSelect?.(workspace);
+      onBack();  // Return to main screen after selection
     }
 
     // Delete workspace
