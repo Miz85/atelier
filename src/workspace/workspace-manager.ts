@@ -11,7 +11,7 @@ export interface CreateWorkspaceOptions {
   branchName: string;         // New branch name for this workspace
   name?: string;              // User-friendly name (defaults to branch name)
   agent?: 'claude' | 'opencode';  // Agent type (defaults to 'claude')
-  baseBranch?: string;        // Base branch to create from (defaults to 'main')
+  baseBranch?: string;        // Base branch to create from (auto-detected if not specified)
 }
 
 /**
@@ -32,7 +32,7 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
     branchName,
     name = branchName,
     agent = 'claude',
-    baseBranch = 'main',
+    baseBranch,  // Auto-detected by addWorktree if not specified
   } = options;
 
   // Generate unique ID

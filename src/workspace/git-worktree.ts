@@ -87,18 +87,70 @@ function parseWorktreePorcelain(output: string): GitWorktree[] {
 }
 
 /**
+ * Get the default branch name for a repository.
+ * Tries remote HEAD first, falls back to local HEAD, then common defaults.
+ *
+ * @param repoPath - Absolute path to the git repository
+ * @returns The default branch name (e.g., 'main', 'master', 'preprod')
+ */
+export async function getDefaultBranch(repoPath: string): Promise<string> {
+  // Try to get default branch from remote HEAD (most reliable for repos with remotes)
+  try {
+    const result = await $({ cwd: repoPath })`git symbolic-ref refs/remotes/origin/HEAD`;
+    // Returns something like "refs/remotes/origin/main"
+    const ref = result.stdout.trim();
+    const branch = ref.replace('refs/remotes/origin/', '');
+    if (branch) return branch;
+  } catch {
+    // No remote HEAD set, try other methods
+  }
+
+  // Try to detect from remote tracking branches
+  try {
+    const result = await $({ cwd: repoPath })`git remote show origin`;
+    const match = result.stdout.match(/HEAD branch:\s*(\S+)/);
+    if (match && match[1]) return match[1];
+  } catch {
+    // No remote or can't connect
+  }
+
+  // Fall back to local HEAD branch
+  try {
+    const result = await $({ cwd: repoPath })`git symbolic-ref --short HEAD`;
+    const branch = result.stdout.trim();
+    if (branch) return branch;
+  } catch {
+    // Detached HEAD or other issue
+  }
+
+  // Last resort: check for common default branches
+  try {
+    const result = await $({ cwd: repoPath })`git branch -l main master preprod develop`;
+    const branches = result.stdout.trim().split('\n').map(b => b.replace(/^\*?\s*/, ''));
+    for (const preferred of ['main', 'master', 'preprod', 'develop']) {
+      if (branches.includes(preferred)) return preferred;
+    }
+  } catch {
+    // Branch list failed
+  }
+
+  // Give up and return 'main' as default
+  return 'main';
+}
+
+/**
  * Add a new worktree with a new branch.
  *
  * @param repoPath - Absolute path to the git repository
  * @param worktreePath - Absolute path where the new worktree should be created
  * @param branchName - Name for the new branch (will be created)
- * @param baseBranch - Base branch to branch from (default: 'main')
+ * @param baseBranch - Base branch to branch from (auto-detected if not provided)
  */
 export async function addWorktree(
   repoPath: string,
   worktreePath: string,
   branchName: string,
-  baseBranch: string = 'main'
+  baseBranch?: string
 ): Promise<void> {
   try {
     // Fetch latest refs from origin to ensure we have the base branch
@@ -110,8 +162,11 @@ export async function addWorktree(
       console.warn(`Warning: git fetch failed: ${fetchError.stderr || fetchError.message}`);
     }
 
+    // Auto-detect default branch if not specified
+    const targetBranch = baseBranch ?? await getDefaultBranch(repoPath);
+
     // Add worktree with new branch based on origin/baseBranch
-    await $({ cwd: repoPath })`git worktree add -b ${branchName} ${worktreePath} origin/${baseBranch}`;
+    await $({ cwd: repoPath })`git worktree add -b ${branchName} ${worktreePath} origin/${targetBranch}`;
   } catch (error: any) {
     const stderr = error.stderr || '';
 
