@@ -19,19 +19,19 @@ Progress: [██░░░░░░░░] 25%
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2.9 min
-- Total execution time: 0.05 hours
+- Total plans completed: 2
+- Average duration: 3.0 min
+- Total execution time: 0.10 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | 2.9 min | 2.9 min |
+| 01-foundation | 2 | 5.9 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (2.9m)
-- Trend: Starting execution
+- Last 5 plans: 01-01 (3.0m), 01-02 (2.9m)
+- Trend: Consistent velocity
 
 *Updated after each plan completion*
 
@@ -45,6 +45,8 @@ Recent decisions affecting current work:
 - Phase 1: TUI over desktop/web — Developer tool, terminal-native workflow
 - Phase 1: TypeScript + Ink — React patterns, good DX, familiar to many devs
 - Phase 1: Git worktrees for isolation — True filesystem isolation
+- 01-01: Use conf package for config persistence (XDG-compliant, battle-tested)
+- 01-01: ESM module type with NodeNext module resolution
 - 01-02: Use synchronous filesystem operations for Jotai's getItem requirement
 - 01-02: Store state in ~/.equipe/state/*.json for XDG-adjacent simplicity
 - 01-02: Use write-file-atomic for crash-safe persistence
@@ -59,6 +61,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-02T18:52:55Z
-Stopped at: Completed 01-02-PLAN.md (State Persistence)
+Last session: 2026-02-02T18:53:11Z
+Stopped at: Completed 01-01-PLAN.md (TypeScript Foundation and Configuration)
 Resume file: None
