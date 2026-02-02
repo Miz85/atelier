@@ -1,5 +1,5 @@
-import { createWorkspace, deleteWorkspace, syncWorkspacesFromGit } from './workspace-manager.js';
-import { listWorktrees } from './git-worktree.js';
+import { createWorkspace, deleteWorkspace, syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace-manager.js';
+import { listWorktrees, type GitWorktree } from './git-worktree.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -82,6 +82,29 @@ async function test() {
     const worktreesAfter = await listWorktrees(repoPath);
     if (worktreesAfter.length !== 1) throw new Error('Expected 1 worktree after delete');
     console.log('✓ deleteWorkspace works');
+
+    // Test 4: gitWorktreeToWorkspace
+    console.log('\nTest 4: gitWorktreeToWorkspace');
+    const mockWorktree: GitWorktree = {
+      path: '/test/path',
+      head: 'abc123',
+      branch: 'refs/heads/feature/test',
+      bare: false,
+      detached: false,
+      locked: false,
+      prunable: false,
+    };
+
+    const mockSettings = { defaultAgent: 'claude' as const, ideCommand: 'code' };
+    const converted = gitWorktreeToWorkspace(mockWorktree, mockSettings);
+
+    console.log('Converted workspace:', converted);
+    if (converted.branch !== 'feature/test') throw new Error('Wrong branch');
+    if (converted.name !== 'test') throw new Error('Wrong name');
+    if (converted.agent !== 'claude') throw new Error('Wrong agent');
+    if (converted.path !== '/test/path') throw new Error('Wrong path');
+    if (!converted.id) throw new Error('Missing ID');
+    console.log('✓ gitWorktreeToWorkspace works');
 
     console.log('\n✓ All workspace-manager tests passed!');
   } finally {
