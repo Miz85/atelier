@@ -12,7 +12,7 @@ Build a terminal UI for orchestrating coding agents across isolated git worktree
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Core infrastructure with process management and state persistence
+- [x] **Phase 1: Foundation** - Core infrastructure with process management and state persistence
 - [ ] **Phase 2: Workspace Management** - Create and manage isolated git worktrees
 - [ ] **Phase 3: Agent Integration** - Spawn and interact with coding agents
 - [ ] **Phase 4: UI/Navigation** - Three-pane interface with keyboard navigation
@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project setup and configuration system (conf package)
-- [ ] 01-02-PLAN.md — State persistence with Jotai and FileSystem storage
-- [ ] 01-03-PLAN.md — Process lifecycle management (cleanup, signals, PTY)
-- [ ] 01-04-PLAN.md — Ink app shell with settings UI
+- [x] 01-01-PLAN.md — Project setup and configuration system (conf package)
+- [x] 01-02-PLAN.md — State persistence with Jotai and FileSystem storage
+- [x] 01-03-PLAN.md — Process lifecycle management (cleanup, signals, PTY)
+- [x] 01-04-PLAN.md — Ink app shell with settings UI
 
 ### Phase 2: Workspace Management
 **Goal**: Users can create and manage isolated workspaces with git worktrees
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/4 | Planned | - |
+| 1. Foundation | 4/4 | ✓ Complete | 2026-02-02 |
 | 2. Workspace Management | 0/TBD | Not started | - |
 | 3. Agent Integration | 0/TBD | Not started | - |
 | 4. UI/Navigation | 0/TBD | Not started | - |
