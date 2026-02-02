@@ -63,7 +63,7 @@ export class FileSystemStorage {
   }
 
   // Required by Jotai's createJSONStorage
-  subscribe(key: string, callback: (value: unknown) => void, initialValue: unknown): () => void {
+  subscribe<T>(key: string, callback: (value: T) => void, initialValue: T): () => void {
     // For single-process CLI, no cross-process sync needed
     // Return no-op unsubscribe
     return () => {};
@@ -82,7 +82,7 @@ export function createJotaiStorage<T>() {
     getItem: (key: string, initialValue: T): T => fsStorage.getItem(key, initialValue),
     setItem: (key: string, value: T): void => fsStorage.setItem(key, value),
     removeItem: (key: string): void => fsStorage.removeItem(key),
-    subscribe: (key: string, callback: (value: unknown) => void, initialValue: unknown): (() => void) => {
+    subscribe: (key: string, callback: (value: T) => void, initialValue: T): (() => void) => {
       // For single-process CLI, no cross-process sync needed
       // Return no-op unsubscribe
       return () => {};
