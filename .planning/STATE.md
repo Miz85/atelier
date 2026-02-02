@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Quickly spin up and switch between isolated coding agent workspaces without losing context or stepping on each other's work
-**Current focus:** Phase 1 - Foundation
+**Current focus:** Phase 2 - Workspace Management
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-02 — Completed 01-04-PLAN.md (TUI App Shell with Settings)
+Phase: 2 of 5 (Workspace Management)
+Plan: 2 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-02 — Completed 02-02-PLAN.md (Active Workspace Tracking)
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 56%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3.2 min
-- Total execution time: 0.22 hours
+- Total plans completed: 5
+- Average duration: 2.8 min
+- Total execution time: 0.23 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 4 | 13.0 min | 3.2 min |
+| 02-workspace-management | 1 | 1.0 min | 1.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3.0m), 01-02 (2.9m), 01-03 (3.1m), 01-04 (4.0m)
-- Trend: Consistent velocity with slight increase for UI complexity
+- Last 5 plans: 01-02 (2.9m), 01-03 (3.1m), 01-04 (4.0m), 02-02 (1.0m)
+- Trend: Fast execution for state-only changes
 
 *Updated after each plan completion*
 
@@ -56,6 +57,8 @@ Recent decisions affecting current work:
 - 01-04: React 18.x for Ink compatibility — 19.x causes type errors
 - 01-04: Keyboard-first navigation — j/k/arrows for nav, Enter to edit, q/Esc to exit
 - 01-04: Immediate settings persistence — No save button, changes persist via Jotai
+- 02-02: Use derived atom pattern for activeWorkspaceAtom — Separates persistence (ID) from computation (object lookup)
+- 02-02: Persist only workspace ID, not full object — Maintains single source of truth in workspacesAtom
 
 ### Pending Todos
 
@@ -63,11 +66,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 1 complete with all success criteria met.
+None - Phase 2 progressing smoothly.
 
 ## Session Continuity
 
-Last session: 2026-02-02T19:17:55Z
-Stopped at: Completed 01-04-PLAN.md (TUI App Shell with Settings) - Phase 1 complete
+Last session: 2026-02-02T20:08:51Z
+Stopped at: Completed 02-02-PLAN.md (Active Workspace Tracking)
 Resume file: None
-Next up: Phase 2 - Workspace Management
+Next up: Continue Phase 2 plans
