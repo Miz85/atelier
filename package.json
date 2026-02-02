@@ -9,7 +9,8 @@
     "dev": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:config": "node dist/config/test-config.js",
-    "test:state": "node dist/state/test-state.js"
+    "test:state": "node dist/state/test-state.js",
+    "test:worktree": "node dist/workspace/test-git-worktree.js"
   },
   "keywords": [],
   "author": "",
