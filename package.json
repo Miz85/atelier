@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:config": "node dist/config/test-config.js",
     "test:state": "node dist/state/test-state.js",
-    "test:worktree": "node dist/workspace/test-git-worktree.js"
+    "test:worktree": "node dist/workspace/test-git-worktree.js",
+    "test:workspace-manager": "node dist/workspace/test-workspace-manager.js"
   },
   "keywords": [],
   "author": "",

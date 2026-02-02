@@ -1,6 +1,7 @@
 // src/workspace/workspace-manager.ts
 import { nanoid } from 'nanoid';
 import { dirname, join } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { addWorktree, removeWorktree, listWorktrees, type GitWorktree } from './git-worktree.js';
 import { processRegistry } from '../processes/cleanup.js';
 import type { Workspace } from '../state/workspace.js';
@@ -46,12 +47,15 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   // Create git worktree
   await addWorktree(repoPath, worktreePath, branchName, baseBranch);
 
+  // Resolve the real path to handle symlinks (matches what git worktree list returns)
+  const realWorktreePath = realpathSync(worktreePath);
+
   // Create workspace record
   const now = new Date().toISOString();
   const workspace: Workspace = {
     id,
     name,
-    path: worktreePath,
+    path: realWorktreePath,
     branch: branchName,
     agent,
     pid: undefined,  // No agent running yet
@@ -124,15 +128,17 @@ export async function syncWorkspacesFromGit(
 }> {
   const gitWorktrees = await listWorktrees(repoPath);
 
+  // Resolve main repo path to handle symlinks (e.g., /tmp -> /private/tmp on macOS)
+  const mainRepoRealPath = realpathSync(repoPath);
+
   // Build lookup by path (path is unique identifier)
   const gitPaths = new Set(gitWorktrees.map(w => w.path));
   const appPaths = new Map(currentWorkspaces.map(w => [w.path, w]));
 
   // Worktrees in git but not in app -> need to add
   // Skip the main worktree (it's the repo itself, not a workspace)
-  const mainRepoPath = repoPath;
   const toAdd = gitWorktrees.filter(gw =>
-    !appPaths.has(gw.path) && gw.path !== mainRepoPath
+    !appPaths.has(gw.path) && gw.path !== mainRepoRealPath
   );
 
   // Workspaces in app but not in git -> need to remove

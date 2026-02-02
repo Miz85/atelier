@@ -1,0 +1,96 @@
+import { createWorkspace, deleteWorkspace, syncWorkspacesFromGit } from './workspace-manager.js';
+import { listWorktrees } from './git-worktree.js';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { $ } from 'execa';
+
+async function test() {
+  // Create temp directory for test
+  const testDir = mkdtempSync(join(tmpdir(), 'equipe-wm-test-'));
+  const originPath = join(testDir, 'origin');
+  const repoPath = join(testDir, 'repo');
+
+  try {
+    // Initialize a test git repo with a fake origin
+    console.log('Setting up test repo...');
+
+    // Create origin (bare repo)
+    await $`git init --bare ${originPath}`;
+
+    // Clone it to create a working repo
+    await $`git clone ${originPath} ${repoPath}`;
+    await $({ cwd: repoPath })`git config user.email test@test.com`;
+    await $({ cwd: repoPath })`git config user.name Test`;
+
+    // Create initial commit and push to origin
+    await $({ cwd: repoPath })`git commit --allow-empty -m "initial"`;
+    await $({ cwd: repoPath })`git push origin master`;
+
+    // Create main branch (many repos use main now)
+    await $({ cwd: repoPath })`git branch -m main`;
+    await $({ cwd: repoPath })`git push -u origin main`;
+
+    // Test 1: createWorkspace
+    console.log('\nTest 1: createWorkspace');
+    const workspace = await createWorkspace({
+      repoPath,
+      branchName: 'feature/test-workspace',
+      name: 'Test Workspace',
+      agent: 'claude',
+      baseBranch: 'main',
+    });
+
+    console.log('Created workspace:', workspace);
+    if (!workspace.id) throw new Error('Missing workspace ID');
+    if (workspace.name !== 'Test Workspace') throw new Error('Wrong name');
+    if (workspace.branch !== 'feature/test-workspace') throw new Error('Wrong branch');
+    if (!workspace.path.includes('feature-test-workspace')) throw new Error('Wrong path');
+    console.log('✓ createWorkspace works');
+
+    // Verify worktree exists in git
+    const worktrees = await listWorktrees(repoPath);
+    console.log('Worktrees:', worktrees.length);
+    if (worktrees.length !== 2) throw new Error('Expected 2 worktrees (main + new)');
+
+    // Test 2: syncWorkspacesFromGit
+    console.log('\nTest 2: syncWorkspacesFromGit');
+
+    // With empty app state, should report workspace to add
+    const sync1 = await syncWorkspacesFromGit(repoPath, []);
+    console.log('Sync result (empty state):', {
+      toAdd: sync1.toAdd.length,
+      toRemove: sync1.toRemove.length,
+      unchanged: sync1.unchanged.length,
+    });
+    if (sync1.toAdd.length !== 1) throw new Error('Should have 1 workspace to add');
+
+    // With workspace in state, should be unchanged
+    const sync2 = await syncWorkspacesFromGit(repoPath, [workspace]);
+    console.log('Sync result (with state):', {
+      toAdd: sync2.toAdd.length,
+      toRemove: sync2.toRemove.length,
+      unchanged: sync2.unchanged.length,
+    });
+    if (sync2.unchanged.length !== 1) throw new Error('Should have 1 unchanged');
+    console.log('✓ syncWorkspacesFromGit works');
+
+    // Test 3: deleteWorkspace
+    console.log('\nTest 3: deleteWorkspace');
+    await deleteWorkspace(workspace, repoPath);
+
+    const worktreesAfter = await listWorktrees(repoPath);
+    if (worktreesAfter.length !== 1) throw new Error('Expected 1 worktree after delete');
+    console.log('✓ deleteWorkspace works');
+
+    console.log('\n✓ All workspace-manager tests passed!');
+  } finally {
+    // Cleanup
+    rmSync(testDir, { recursive: true, force: true });
+  }
+}
+
+test().catch(err => {
+  console.error('Test failed:', err);
+  process.exit(1);
+});
