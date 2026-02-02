@@ -5,6 +5,7 @@ import { realpathSync } from 'node:fs';
 import { addWorktree, removeWorktree, listWorktrees, type GitWorktree } from './git-worktree.js';
 import { processRegistry } from '../processes/cleanup.js';
 import type { Workspace } from '../state/workspace.js';
+import type { Settings } from '../state/settings.js';
 
 export interface CreateWorkspaceOptions {
   repoPath: string;           // Path to the main git repository
@@ -148,4 +149,38 @@ export async function syncWorkspacesFromGit(
   const unchanged = currentWorkspaces.filter(w => gitPaths.has(w.path));
 
   return { toAdd, toRemove, unchanged };
+}
+
+/**
+ * Convert a GitWorktree to a Workspace object.
+ * Used when syncing worktrees created outside the app.
+ *
+ * @param worktree - GitWorktree from git worktree list
+ * @param settings - App settings (for default agent)
+ */
+export function gitWorktreeToWorkspace(
+  worktree: GitWorktree,
+  settings: Settings
+): Workspace {
+  // Extract branch name from refs/heads/feature format
+  const branchName = worktree.branch
+    ? worktree.branch.replace('refs/heads/', '')
+    : 'detached';
+
+  // Derive name from branch (use last segment for feature/xyz style)
+  const nameParts = branchName.split('/');
+  const name = nameParts[nameParts.length - 1];
+
+  const now = new Date().toISOString();
+
+  return {
+    id: nanoid(),
+    name,
+    path: worktree.path,
+    branch: branchName,
+    agent: settings.defaultAgent,
+    pid: undefined,
+    createdAt: now,
+    lastActiveAt: now,
+  };
 }
