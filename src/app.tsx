@@ -3,21 +3,31 @@ import React, { useState } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import { Provider, useAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
-import { workspacesAtom } from './state/workspace.js';
+import { CreateWorkspace } from './components/CreateWorkspace.js';
+import { WorkspaceList } from './components/WorkspaceList.js';
+import { workspacesAtom, activeWorkspaceAtom, repoPathAtom } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 
-type Screen = 'main' | 'settings';
+type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list';
 
 function AppContent() {
   const { exit } = useApp();
   const [screen, setScreen] = useState<Screen>('main');
   const [workspaces] = useAtom(workspacesAtom);
   const [settings] = useAtom(settingsAtom);
+  const [activeWorkspace] = useAtom(activeWorkspaceAtom);
+  const [repoPath] = useAtom(repoPathAtom);
 
   useInput((input, key) => {
     if (screen !== 'main') return;
 
     // Global shortcuts
+    if (input === 'n') {
+      setScreen('create-workspace');
+    }
+    if (input === 'w') {
+      setScreen('workspace-list');
+    }
     if (input === 's') {
       setScreen('settings');
     }
@@ -30,6 +40,14 @@ function AppContent() {
     return <Settings onBack={() => setScreen('main')} />;
   }
 
+  if (screen === 'create-workspace') {
+    return <CreateWorkspace onBack={() => setScreen('main')} />;
+  }
+
+  if (screen === 'workspace-list') {
+    return <WorkspaceList onBack={() => setScreen('main')} />;
+  }
+
   // Main screen
   return (
     <Box flexDirection="column" padding={1}>
@@ -40,26 +58,18 @@ function AppContent() {
 
       <Box marginBottom={1} flexDirection="column">
         <Text>Workspaces: {workspaces.length}</Text>
+        {activeWorkspace ? (
+          <Text color="green">Active: {activeWorkspace.name} ({activeWorkspace.branch})</Text>
+        ) : (
+          <Text color="yellow">No active workspace</Text>
+        )}
         <Text>Default Agent: {settings.defaultAgent}</Text>
         <Text>IDE: {settings.ideCommand}</Text>
+        {repoPath && <Text color="gray">Repo: {repoPath}</Text>}
       </Box>
 
-      {workspaces.length === 0 ? (
-        <Box marginBottom={1}>
-          <Text color="yellow">No workspaces yet. (Phase 2 will add workspace creation)</Text>
-        </Box>
-      ) : (
-        <Box flexDirection="column" marginBottom={1}>
-          {workspaces.map((ws) => (
-            <Text key={ws.id}>
-              - {ws.name} ({ws.branch}) [{ws.agent}]
-            </Text>
-          ))}
-        </Box>
-      )}
-
       <Box marginTop={1} flexDirection="column">
-        <Text color="gray">s: settings | q: quit</Text>
+        <Text color="gray">n: new workspace | w: list workspaces | s: settings | q: quit</Text>
       </Box>
     </Box>
   );
