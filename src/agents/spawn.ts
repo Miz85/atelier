@@ -1,4 +1,5 @@
 // src/agents/spawn.ts
+import { execSync } from 'node:child_process';
 import { BufferedPtyProcess } from '../processes/pty-manager.js';
 import { AgentType, AgentCommand, AgentInstance, AgentEvents } from './types.js';
 
@@ -7,6 +8,24 @@ import { AgentType, AgentCommand, AgentInstance, AgentEvents } from './types.js'
  * Maps agent ID to AgentInstance.
  */
 const agentInstances = new Map<string, AgentInstance>();
+
+/**
+ * Resolve command to full path using 'which'.
+ * Falls back to command name if 'which' fails.
+ */
+function resolveCommandPath(command: string): string {
+  try {
+    // Use user's shell to resolve command path
+    const fullPath = execSync(`which ${command}`, {
+      encoding: 'utf-8',
+      env: process.env,
+    }).trim();
+    return fullPath || command;
+  } catch {
+    // 'which' failed, return original command
+    return command;
+  }
+}
 
 /**
  * Spawn a new agent process in a workspace directory.
@@ -26,8 +45,9 @@ export function spawnAgent(
   // Generate unique agent ID
   const agentId = `agent-${workspaceId}-${Date.now()}`;
 
-  // Look up CLI command
-  const command = AgentCommand[agentType];
+  // Look up CLI command and resolve to full path
+  const commandName = AgentCommand[agentType];
+  const command = resolveCommandPath(commandName);
 
   // Spawn PTY process
   const pty = new BufferedPtyProcess({
