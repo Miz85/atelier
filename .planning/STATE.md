@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Quickly spin up and switch between isolated coding agent workspaces without losing context or stepping on each other's work
-**Current focus:** Phase 3 - Agent Integration (next)
+**Current focus:** Phase 4 - UI/Navigation (next)
 
 ## Current Position
 
-Phase: 3 of 5 (Agent Integration)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-03 — Completed 03-04-PLAN.md (Agent integration completion)
+Phase: 4 of 5 (UI/Navigation)
+Plan: 1 of TBD in current phase
+Status: In progress
+Last activity: 2026-02-03 — Completed 04-01-PLAN.md (UI State and Help Screen)
 
-Progress: [█████████████░] 93% (14 of 15 plans complete)
+Progress: [████████████████] 100% (16 of 16+ plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 8.3 min
-- Total execution time: 2.0 hours
+- Total plans completed: 15
+- Average duration: 9.5 min
+- Total execution time: 2.5 hours
 
 **By Phase:**
 
@@ -29,11 +29,12 @@ Progress: [█████████████░] 93% (14 of 15 plans compl
 |-------|-------|-------|----------|
 | 01-foundation | 4 | 13.0 min | 3.2 min |
 | 02-workspace-management | 6 | 99.4 min | 16.6 min |
-| 03-agent-integration | 4 | 6.8 min | 1.7 min |
+| 03-agent-integration | 5 | 36.8 min | 7.4 min |
+| 04-ui-navigation | 1 | 2.0 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (2.0m), 03-02 (1.0m), 03-03 (1.2m), 03-04 (2.6m)
-- Note: Phase 3 plans executing very quickly (avg 1.7 min) - well-isolated component work
+- Last 5 plans: 03-02 (1.0m), 03-03 (1.2m), 03-04 (2.6m), 03-05 (30m), 04-01 (2.0m)
+- Note: 03-05 included debugging and major refactor (node-pty → tmux)
 
 *Updated after each plan completion*
 
@@ -83,6 +84,11 @@ Recent decisions affecting current work:
 - 03-04: Tab key cycles through agent options — Simple single-key interaction for agent override
 - 03-04: Map 'idle' status to 'stopped' for controls — AgentControls expects running/stopped/error only
 - 03-04: Separate input mode for agent commands — Clean separation between viewing output and sending input
+- 03-05: tmux over node-pty — Battle-tested terminal multiplexer handles all I/O complexity
+- 03-05: spawnSync for tmux attach — Blocks Node.js completely to prevent Ink interference
+- 03-05: Session persistence via tmux — Agents survive equipe crashes
+- 04-01: No persistence for help visibility — Ephemeral state resets on app restart
+- 04-01: HelpScreen only handles closing — Parent handles opening via ? key
 
 ### Pending Todos
 
@@ -90,11 +96,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 3 (Agent Integration) complete with all requirements met. Ready for Phase 4.
+None - Phase 4 progressing. UI state foundation ready.
 
 ## Session Continuity
 
-Last session: 2026-02-03T07:51:48Z
-Stopped at: Completed 03-04-PLAN.md (Agent integration completion)
+Last session: 2026-02-03
+Stopped at: Completed 04-01-PLAN.md (UI State and Help Screen)
 Resume file: None
-Next up: Phase 4 - Next phase in roadmap
+Next up: 04-02-PLAN.md (ThreePaneLayout integration)
