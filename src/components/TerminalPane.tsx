@@ -15,7 +15,8 @@ export function TerminalPane() {
       borderStyle={isFocused ? 'double' : 'single'}
       borderColor={isFocused ? 'cyan' : 'gray'}
       paddingX={1}
-      width="20%"
+      width="100%"
+      height={8}
     >
       {/* Header */}
       <Box marginBottom={1}>

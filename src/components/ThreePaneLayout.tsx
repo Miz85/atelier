@@ -16,7 +16,8 @@ interface ThreePaneLayoutProps {
 
 /**
  * Three-pane layout container with focus management.
- * Renders AgentPane (40%), DiffSummaryPane (40%), TerminalPane (20%).
+ * Top row: AgentPane (60%), DiffSummaryPane (40%)
+ * Bottom row: TerminalPane (100%)
  * Handles global keyboard input for ? (toggle help) and q/Esc (back).
  * Tab navigation between panes is handled by Ink's useFocus system.
  */
@@ -40,12 +41,14 @@ export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
 
   return (
     <Box flexDirection="column" height="100%">
-      {/* Three-pane horizontal layout */}
+      {/* Top row: Agent (60%) + Diff Summary (40%) */}
       <Box flexDirection="row" flexGrow={1}>
         <AgentPane workspace={workspace} />
         <DiffSummaryPane />
-        <TerminalPane />
       </Box>
+
+      {/* Bottom row: Terminal (full width) */}
+      <TerminalPane />
 
       {/* Help screen modal overlay */}
       {showHelp && (

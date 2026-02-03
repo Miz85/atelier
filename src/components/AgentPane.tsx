@@ -218,7 +218,7 @@ export function AgentPane({ workspace }: AgentPaneProps) {
       borderStyle={isFocused ? 'double' : 'single'}
       borderColor={isFocused ? 'cyan' : 'gray'}
       paddingX={1}
-      width="40%"
+      width="60%"
     >
       {/* Header */}
       <Box marginBottom={1}>
