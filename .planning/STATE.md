@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Current Position
 
 Phase: 4 of 5 (UI/Navigation)
-Plan: 1 of TBD in current phase
+Plan: 2 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-03 — Completed 04-01-PLAN.md (UI State and Help Screen)
+Last activity: 2026-02-03 — Completed 04-02-PLAN.md (ThreePaneLayout)
 
-Progress: [████████████████] 100% (16 of 16+ plans complete)
+Progress: [████████████████] 100% (17 of 17+ plans complete)
 
 ## Performance Metrics
 
@@ -30,10 +30,10 @@ Progress: [████████████████] 100% (16 of 16+ pla
 | 01-foundation | 4 | 13.0 min | 3.2 min |
 | 02-workspace-management | 6 | 99.4 min | 16.6 min |
 | 03-agent-integration | 5 | 36.8 min | 7.4 min |
-| 04-ui-navigation | 1 | 2.0 min | 2.0 min |
+| 04-ui-navigation | 2 | 4.0 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (1.0m), 03-03 (1.2m), 03-04 (2.6m), 03-05 (30m), 04-01 (2.0m)
+- Last 5 plans: 03-03 (1.2m), 03-04 (2.6m), 03-05 (30m), 04-01 (2.0m), 04-02 (2.0m)
 - Note: 03-05 included debugging and major refactor (node-pty → tmux)
 
 *Updated after each plan completion*
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 - 03-05: Session persistence via tmux — Agents survive equipe crashes
 - 04-01: No persistence for help visibility — Ephemeral state resets on app restart
 - 04-01: HelpScreen only handles closing — Parent handles opening via ? key
+- 04-02: 40/40/20 width split for panes — Agent and diff get equal space, terminal auxiliary
+- 04-02: Double cyan border for focused pane — Visually distinct from single gray on unfocused
+- 04-02: useFocus pattern for Tab navigation — Ink's built-in focus management
 
 ### Pending Todos
 
@@ -96,11 +99,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 4 progressing. UI state foundation ready.
+None - Phase 4 progressing. Three-pane layout complete.
 
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 04-01-PLAN.md (UI State and Help Screen)
+Stopped at: Completed 04-02-PLAN.md (ThreePaneLayout)
 Resume file: None
-Next up: 04-02-PLAN.md (ThreePaneLayout integration)
+Next up: Phase 4 completion or Phase 5 planning
