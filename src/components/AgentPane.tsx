@@ -47,6 +47,8 @@ export function AgentPane({ workspace }: AgentPaneProps) {
   const [outputPreview, setOutputPreview] = useState<string[]>([]);
   const [attaching, setAttaching] = useState(false);
   const lastOutputRef = useRef<string>('');
+  const autoStartedRef = useRef(false);
+  const autoAttachedRef = useRef(false);
 
   // Derived status for controls (map 'idle' to 'stopped')
   const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
@@ -81,6 +83,63 @@ export function AgentPane({ workspace }: AgentPaneProps) {
 
     return () => clearInterval(interval);
   }, [agentState.agentId, agentState.status, workspace.id, setStatus]);
+
+  // Auto-start agent on mount if not running
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (controlStatus === 'stopped' || controlStatus === 'error' || agentState.status === 'idle') {
+      autoStartedRef.current = true;
+      // Start agent
+      try {
+        const instance = spawnAgent(
+          workspace.id,
+          workspace.path,
+          workspace.agent
+        );
+        initAgentState({ workspaceId: workspace.id, agentId: instance.id });
+      } catch (err) {
+        setStatus({
+          workspaceId: workspace.id,
+          status: 'error',
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    } else if (controlStatus === 'running') {
+      // Already running, mark as auto-started
+      autoStartedRef.current = true;
+    }
+  }, [controlStatus, agentState.status, workspace.id, workspace.path, workspace.agent, initAgentState, setStatus]);
+
+  // Auto-attach once agent is running
+  useEffect(() => {
+    if (autoAttachedRef.current) return;
+    if (!agentState.agentId) return;
+    if (controlStatus !== 'running') return;
+
+    // Small delay to ensure tmux session is ready
+    const timeout = setTimeout(() => {
+      if (autoAttachedRef.current) return;
+      autoAttachedRef.current = true;
+
+      try {
+        attachToAgent(agentState.agentId!);
+
+        // After detach, sync status
+        syncAgentStatus(agentState.agentId!);
+        const instance = getAgentInstance(agentState.agentId!);
+        if (instance && instance.status !== agentState.status) {
+          setStatus({
+            workspaceId: workspace.id,
+            status: instance.status,
+          });
+        }
+      } catch (err) {
+        // Attachment failed
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [agentState.agentId, controlStatus, agentState.status, workspace.id, setStatus]);
 
   // Handle agent spawn
   const handleStart = () => {
