@@ -5,12 +5,12 @@ import { Provider, useAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
 import { CreateWorkspace } from './components/CreateWorkspace.js';
 import { WorkspaceList } from './components/WorkspaceList.js';
-import { AgentView } from './components/AgentView.js';
+import { ThreePaneLayout } from './components/ThreePaneLayout.js';
 import { workspacesAtom, activeWorkspaceAtom, repoPathAtom } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 import { syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace/workspace-manager.js';
 
-type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'agent-view';
+type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'workspace-view';
 
 function AppContent() {
   const { exit } = useApp();
@@ -76,7 +76,7 @@ function AppContent() {
       setScreen('settings');
     }
     if (input === 'a' && activeWorkspace) {
-      setScreen('agent-view');
+      setScreen('workspace-view');
     }
     if (input === 'q' || (key.ctrl && input === 'c')) {
       exit();
@@ -95,12 +95,12 @@ function AppContent() {
     return <WorkspaceList onBack={() => setScreen('main')} />;
   }
 
-  if (screen === 'agent-view') {
+  if (screen === 'workspace-view') {
     if (!activeWorkspace) {
       setScreen('main');
       return null;
     }
-    return <AgentView workspace={activeWorkspace} onBack={() => setScreen('main')} />;
+    return <ThreePaneLayout workspace={activeWorkspace} onBack={() => setScreen('main')} />;
   }
 
   // Main screen
@@ -126,7 +126,7 @@ function AppContent() {
       <Box marginTop={1} flexDirection="column">
         <Text color="gray">
           n: new workspace | w: list workspaces | s: settings
-          {activeWorkspace && ' | a: agent view'} | q: quit
+          {activeWorkspace && ' | a: workspace view'} | q: quit
         </Text>
       </Box>
     </Box>
