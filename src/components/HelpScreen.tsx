@@ -36,16 +36,14 @@ export function HelpScreen({ onClose }: HelpScreenProps) {
       </Box>
 
       <Box marginTop={1} flexDirection="column">
-        <Text bold>Agent Control:</Text>
-        <Text>  s             Start agent</Text>
-        <Text>  x             Stop agent</Text>
-        <Text>  r             Restart agent</Text>
-        <Text>  Enter         Attach to agent session</Text>
-      </Box>
-
-      <Box marginTop={1} flexDirection="column">
-        <Text bold>tmux (when attached):</Text>
-        <Text>  Ctrl+B D      Detach from agent</Text>
+        <Text bold>Agent Pane (when focused):</Text>
+        <Text>  [type]        Send input to agent</Text>
+        <Text>  Enter         Send Enter to agent</Text>
+        <Text>  Ctrl+C        Send interrupt to agent</Text>
+        <Text>  Arrows        Navigate in agent</Text>
+        <Text>  Shift+X       Stop agent</Text>
+        <Text>  s             Start agent (when stopped)</Text>
+        <Text>  r             Restart agent (when stopped)</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">

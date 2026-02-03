@@ -1,17 +1,20 @@
 // src/components/AgentPane.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useInput, useFocus } from 'ink';
+import { Box, Text, useInput, useFocus, useStdout } from 'ink';
 import { useAtom, useSetAtom } from 'jotai';
-import { AgentControls } from './AgentControls.js';
 import {
   spawnAgent,
   stopAgent,
   restartAgent,
-  attachToAgent,
-  getAgentOutput,
   syncAgentStatus,
   getAgentInstance,
 } from '../agents/spawn.js';
+import {
+  capturePane,
+  sendKeys,
+  hasSession,
+  resizeSession,
+} from '../agents/tmux.js';
 import {
   getWorkspaceAgentStateAtom,
   initAgentStateAtom,
@@ -25,13 +28,13 @@ interface AgentPaneProps {
 }
 
 /**
- * Agent output and controls pane.
- * Displays agent status, controls, and output preview.
- * Uses useFocus for Tab navigation between panes.
+ * Agent pane with embedded tmux session.
+ * Shows real-time terminal content and forwards keystrokes when focused.
  */
 export function AgentPane({ workspace }: AgentPaneProps) {
   const { isFocused } = useFocus({ id: 'agent-pane' });
   const [showHelp] = useAtom(showHelpAtom);
+  const { stdout } = useStdout();
 
   // Agent state for this workspace
   const workspaceAgentStateAtom = getWorkspaceAgentStateAtom(workspace.id);
@@ -42,42 +45,56 @@ export function AgentPane({ workspace }: AgentPaneProps) {
   const setStatus = useSetAtom(setStatusAtom);
 
   // UI state
+  const [terminalContent, setTerminalContent] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [operation, setOperation] = useState<string | null>(null);
-  const [outputPreview, setOutputPreview] = useState<string[]>([]);
-  const [attaching, setAttaching] = useState(false);
-  const lastOutputRef = useRef<string>('');
+  const lastContentRef = useRef<string>('');
   const autoStartedRef = useRef(false);
-  const autoAttachedRef = useRef(false);
 
   // Derived status for controls (map 'idle' to 'stopped')
   const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
 
-  // Periodically sync status and fetch output preview
+  // Calculate available height for terminal content
+  const terminalHeight = Math.max(10, (stdout?.rows || 24) - 10);
+
+  // Resize tmux session to match pane dimensions
+  useEffect(() => {
+    if (!hasSession(workspace.id)) return;
+    resizeSession(workspace.id);
+  }, [workspace.id, stdout?.columns, stdout?.rows]);
+
+  // Capture tmux content periodically (fast refresh for responsiveness)
+  useEffect(() => {
+    if (!hasSession(workspace.id)) return;
+
+    const captureContent = () => {
+      const content = capturePane(workspace.id, terminalHeight);
+      if (content !== lastContentRef.current) {
+        lastContentRef.current = content;
+        const lines = content.split('\n');
+        setTerminalContent(lines.slice(-terminalHeight));
+      }
+    };
+
+    // Initial capture
+    captureContent();
+
+    // Fast refresh when focused, slower when not
+    const interval = setInterval(captureContent, isFocused ? 100 : 500);
+    return () => clearInterval(interval);
+  }, [workspace.id, terminalHeight, isFocused]);
+
+  // Sync agent status periodically
   useEffect(() => {
     if (!agentState.agentId) return;
 
     const interval = setInterval(() => {
-      // Sync status from tmux
       syncAgentStatus(agentState.agentId!);
-
-      // Check if status changed
       const instance = getAgentInstance(agentState.agentId!);
       if (instance && instance.status !== agentState.status) {
         setStatus({
           workspaceId: workspace.id,
           status: instance.status,
         });
-      }
-
-      // Update output preview only if content changed
-      if (instance?.status === 'running') {
-        const output = getAgentOutput(agentState.agentId!, 20);
-        if (output !== lastOutputRef.current) {
-          lastOutputRef.current = output;
-          const lines = output.split('\n').filter(line => line.trim());
-          setOutputPreview(lines.slice(-10)); // Last 10 non-empty lines
-        }
       }
     }, 1000);
 
@@ -89,13 +106,8 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     if (autoStartedRef.current) return;
     if (controlStatus === 'stopped' || controlStatus === 'error' || agentState.status === 'idle') {
       autoStartedRef.current = true;
-      // Start agent
       try {
-        const instance = spawnAgent(
-          workspace.id,
-          workspace.path,
-          workspace.agent
-        );
+        const instance = spawnAgent(workspace.id, workspace.path, workspace.agent);
         initAgentState({ workspaceId: workspace.id, agentId: instance.id });
       } catch (err) {
         setStatus({
@@ -105,80 +117,19 @@ export function AgentPane({ workspace }: AgentPaneProps) {
         });
       }
     } else if (controlStatus === 'running') {
-      // Already running, mark as auto-started
       autoStartedRef.current = true;
     }
   }, [controlStatus, agentState.status, workspace.id, workspace.path, workspace.agent, initAgentState, setStatus]);
 
-  // Auto-attach once agent is running
-  useEffect(() => {
-    if (autoAttachedRef.current) return;
-    if (!agentState.agentId) return;
-    if (controlStatus !== 'running') return;
-
-    // Small delay to ensure tmux session is ready
-    const timeout = setTimeout(() => {
-      if (autoAttachedRef.current) return;
-      autoAttachedRef.current = true;
-
-      try {
-        attachToAgent(agentState.agentId!);
-
-        // After detach, sync status
-        syncAgentStatus(agentState.agentId!);
-        const instance = getAgentInstance(agentState.agentId!);
-        if (instance && instance.status !== agentState.status) {
-          setStatus({
-            workspaceId: workspace.id,
-            status: instance.status,
-          });
-        }
-      } catch (err) {
-        // Attachment failed
-      }
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [agentState.agentId, controlStatus, agentState.status, workspace.id, setStatus]);
-
-  // Handle agent spawn
-  const handleStart = () => {
-    setLoading(true);
-    setOperation('Starting');
-    try {
-      const instance = spawnAgent(
-        workspace.id,
-        workspace.path,
-        workspace.agent
-      );
-
-      // Initialize agent state in Jotai
-      initAgentState({ workspaceId: workspace.id, agentId: instance.id });
-    } catch (err) {
-      setStatus({
-        workspaceId: workspace.id,
-        status: 'error',
-        error: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setLoading(false);
-      setOperation(null);
-    }
-  };
-
   // Handle agent stop
   const handleStop = async () => {
     if (!agentState.agentId) return;
-
     setLoading(true);
-    setOperation('Stopping');
     try {
       await stopAgent(agentState.agentId);
-      setStatus({
-        workspaceId: workspace.id,
-        status: 'stopped',
-      });
-      setOutputPreview([]);
+      setStatus({ workspaceId: workspace.id, status: 'stopped' });
+      setTerminalContent([]);
+      lastContentRef.current = '';
     } catch (err) {
       setStatus({
         workspaceId: workspace.id,
@@ -187,20 +138,18 @@ export function AgentPane({ workspace }: AgentPaneProps) {
       });
     } finally {
       setLoading(false);
-      setOperation(null);
     }
   };
 
   // Handle agent restart
   const handleRestart = () => {
     if (!agentState.agentId) return;
-
     setLoading(true);
-    setOperation('Restarting');
     try {
       const instance = restartAgent(agentState.agentId);
       initAgentState({ workspaceId: workspace.id, agentId: instance.id });
-      setOutputPreview([]);
+      setTerminalContent([]);
+      lastContentRef.current = '';
     } catch (err) {
       setStatus({
         workspaceId: workspace.id,
@@ -209,141 +158,162 @@ export function AgentPane({ workspace }: AgentPaneProps) {
       });
     } finally {
       setLoading(false);
-      setOperation(null);
     }
   };
 
-  // Handle attaching to tmux session
-  const handleAttach = () => {
-    if (!agentState.agentId || attaching) return;
-
-    setAttaching(true);
-
+  // Handle agent start
+  const handleStart = () => {
+    setLoading(true);
     try {
-      // This will take over the terminal until user detaches (Ctrl+B D)
-      // spawnSync blocks completely, so Ink won't interfere
-      attachToAgent(agentState.agentId);
-
-      // After detach, sync status (agent may have exited)
-      syncAgentStatus(agentState.agentId);
-      const instance = getAgentInstance(agentState.agentId);
-      if (instance && instance.status !== agentState.status) {
-        setStatus({
-          workspaceId: workspace.id,
-          status: instance.status,
-        });
-      }
+      const instance = spawnAgent(workspace.id, workspace.path, workspace.agent);
+      initAgentState({ workspaceId: workspace.id, agentId: instance.id });
     } catch (err) {
-      // Attachment failed or session ended
       setStatus({
         workspaceId: workspace.id,
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      setAttaching(false);
+      setLoading(false);
     }
   };
 
-  // Keyboard handling - only active when pane is focused, help is not shown, and not attaching
+  // Forward keystrokes to tmux when focused and agent is running
   useInput((input, key) => {
-    // Ignore input during loading
     if (loading) return;
 
-    // Start agent
-    if (input === 's' && (controlStatus === 'stopped' || controlStatus === 'error')) {
-      handleStart();
-      return;
+    // Control shortcuts (not forwarded to tmux)
+    if (!key.ctrl && !key.meta) {
+      // Stop agent with Ctrl+X (we use 'X' uppercase to avoid conflicts)
+      if (input === 'X' && controlStatus === 'running') {
+        handleStop();
+        return;
+      }
+
+      // Start/restart when not running
+      if (controlStatus !== 'running') {
+        if (input === 's') {
+          handleStart();
+          return;
+        }
+        if (input === 'r' && controlStatus === 'stopped') {
+          handleRestart();
+          return;
+        }
+        return; // Don't forward input when agent not running
+      }
     }
 
-    // Stop agent
-    if (input === 'x' && controlStatus === 'running') {
-      handleStop();
-      return;
+    // Forward input to tmux
+    if (controlStatus === 'running' && hasSession(workspace.id)) {
+      try {
+        if (key.return) {
+          sendKeys(workspace.id, 'Enter');
+        } else if (key.backspace || key.delete) {
+          sendKeys(workspace.id, 'BSpace');
+        } else if (key.upArrow) {
+          sendKeys(workspace.id, 'Up');
+        } else if (key.downArrow) {
+          sendKeys(workspace.id, 'Down');
+        } else if (key.leftArrow) {
+          sendKeys(workspace.id, 'Left');
+        } else if (key.rightArrow) {
+          sendKeys(workspace.id, 'Right');
+        } else if (key.tab) {
+          // Tab is used for pane navigation, don't forward
+          return;
+        } else if (key.escape) {
+          // Escape goes back, don't forward
+          return;
+        } else if (key.ctrl && input === 'c') {
+          sendKeys(workspace.id, 'C-c');
+        } else if (key.ctrl && input === 'd') {
+          sendKeys(workspace.id, 'C-d');
+        } else if (key.ctrl && input === 'z') {
+          sendKeys(workspace.id, 'C-z');
+        } else if (key.ctrl && input === 'l') {
+          sendKeys(workspace.id, 'C-l');
+        } else if (input && !key.ctrl && !key.meta) {
+          // Regular character input - escape special tmux chars
+          const escaped = input
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/'/g, "\\'")
+            .replace(/;/g, '\\;')
+            .replace(/\$/g, '\\$');
+          sendKeys(workspace.id, escaped);
+        }
+      } catch {
+        // Send failed, session may have ended
+      }
     }
+  }, { isActive: isFocused && !showHelp });
 
-    // Restart agent
-    if (input === 'r' && controlStatus === 'stopped') {
-      handleRestart();
-      return;
-    }
-
-    // Attach to agent session
-    if (key.return && controlStatus === 'running') {
-      handleAttach();
-      return;
-    }
-  }, { isActive: isFocused && !showHelp && !attaching });
+  const isInteractive = isFocused && controlStatus === 'running';
 
   return (
     <Box
       flexDirection="column"
       borderStyle={isFocused ? 'double' : 'single'}
       borderColor={isFocused ? 'cyan' : 'gray'}
-      paddingX={1}
       width="60%"
+      height="100%"
     >
-      {/* Header */}
-      <Box marginBottom={1}>
-        <Text bold color={isFocused ? 'cyan' : 'white'}>
-          {isFocused ? '> ' : '  '}Agent
-        </Text>
-        <Text color="gray"> - {workspace.name}</Text>
-      </Box>
-
-      {/* Agent info */}
-      <Box marginBottom={1}>
-        <Text>Agent: {workspace.agent} | </Text>
-        <Text color={controlStatus === 'running' ? 'green' : controlStatus === 'error' ? 'red' : 'yellow'}>
-          {controlStatus.toUpperCase()}
-        </Text>
-      </Box>
-
-      {/* Agent Controls */}
-      <AgentControls
-        agentId={agentState.agentId}
-        status={controlStatus}
-        loading={loading}
-        operation={operation}
-      />
-
-      {/* Output Preview */}
-      {controlStatus === 'running' && outputPreview.length > 0 && (
-        <Box
-          flexDirection="column"
-          marginTop={1}
-          borderStyle="single"
-          borderColor="gray"
-          paddingX={1}
-          height={10}
-        >
-          <Text color="gray" dimColor>Output preview:</Text>
-          {outputPreview.map((line, i) => (
-            <Text key={i} wrap="truncate">{line}</Text>
-          ))}
-        </Box>
-      )}
-
-      {/* Error display */}
-      {agentState.error && (
-        <Box marginTop={1}>
-          <Text color="red">Error: {agentState.error}</Text>
-        </Box>
-      )}
-
-      {/* Instructions when focused */}
-      {isFocused && (
-        <Box marginTop={1} flexDirection="column">
-          {controlStatus === 'running' && (
-            <Text color="green">Enter: attach</Text>
-          )}
-          <Text color="gray" dimColor>
-            {controlStatus === 'stopped' && 's: start | r: restart'}
-            {controlStatus === 'running' && 'x: stop'}
-            {controlStatus === 'error' && 's: retry'}
+      {/* Header bar */}
+      <Box paddingX={1} justifyContent="space-between">
+        <Box>
+          <Text bold color={isFocused ? 'cyan' : 'white'}>
+            Agent
           </Text>
+          <Text color="gray"> - {workspace.name}</Text>
         </Box>
-      )}
+        <Box>
+          <Text color={controlStatus === 'running' ? 'green' : controlStatus === 'error' ? 'red' : 'yellow'}>
+            {controlStatus.toUpperCase()}
+          </Text>
+          {isInteractive && <Text color="cyan"> [INTERACTIVE]</Text>}
+        </Box>
+      </Box>
+
+      {/* Terminal content */}
+      <Box
+        flexDirection="column"
+        flexGrow={1}
+        paddingX={1}
+        overflow="hidden"
+      >
+        {controlStatus === 'running' && terminalContent.length > 0 ? (
+          terminalContent.map((line, i) => (
+            <Text key={i} wrap="truncate">{line || ' '}</Text>
+          ))
+        ) : controlStatus === 'running' ? (
+          <Text color="gray">Starting agent...</Text>
+        ) : agentState.error ? (
+          <Text color="red">Error: {agentState.error}</Text>
+        ) : (
+          <Box flexDirection="column">
+            <Text color="gray">Agent not running</Text>
+            <Text color="gray" dimColor>Press 's' to start</Text>
+          </Box>
+        )}
+      </Box>
+
+      {/* Status bar */}
+      <Box paddingX={1} borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray">
+        {loading ? (
+          <Text color="yellow">Loading...</Text>
+        ) : isInteractive ? (
+          <Text color="gray" dimColor>
+            Type to interact | Shift+X: stop | Tab: switch pane
+          </Text>
+        ) : controlStatus === 'stopped' ? (
+          <Text color="gray" dimColor>s: start | r: restart</Text>
+        ) : controlStatus === 'error' ? (
+          <Text color="gray" dimColor>s: retry</Text>
+        ) : (
+          <Text color="gray" dimColor>Tab: switch pane</Text>
+        )}
+      </Box>
     </Box>
   );
 }
