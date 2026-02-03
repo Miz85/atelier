@@ -62,7 +62,11 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     resizeSession(workspace.id);
   }, [workspace.id, stdout?.columns, stdout?.rows]);
 
-  // Capture tmux content periodically (fast refresh for responsiveness)
+  // Capture tmux content periodically
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
+
   useEffect(() => {
     if (!hasSession(workspace.id)) return;
 
@@ -78,10 +82,18 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     // Initial capture
     captureContent();
 
-    // Fast refresh when focused, slower when not
-    const interval = setInterval(captureContent, isFocused ? 100 : 500);
-    return () => clearInterval(interval);
-  }, [workspace.id, terminalHeight, isFocused]);
+    // Use adaptive refresh - check focus via ref to avoid interval recreation
+    const tick = () => {
+      captureContent();
+      const delay = isFocusedRef.current ? 200 : 1000;
+      intervalRef.current = setTimeout(tick, delay);
+    };
+    intervalRef.current = setTimeout(tick, 200);
+
+    return () => {
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+    };
+  }, [workspace.id, terminalHeight]);
 
   // Sync agent status periodically
   useEffect(() => {

@@ -134,11 +134,11 @@ function stripAnsi(str: string): string {
 
 /**
  * Capture the current pane content from a tmux session.
- * Returns the visible terminal output with ANSI codes stripped.
+ * Returns the visible terminal output with ANSI color codes preserved.
  *
  * @param workspaceId - Workspace identifier
  * @param lines - Number of lines to capture (default: 50)
- * @returns Captured output string (ANSI codes stripped)
+ * @returns Captured output string with ANSI colors
  */
 export function capturePane(workspaceId: string, lines: number = 50): string {
   const name = sessionName(workspaceId);
@@ -148,12 +148,12 @@ export function capturePane(workspaceId: string, lines: number = 50): string {
   }
 
   try {
-    // -p: print to stdout, -S: start line (negative = from end)
+    // -p: print to stdout, -e: include escape sequences (colors), -S: start line
     const output = execSync(
-      `tmux capture-pane -t "${name}" -p -S -${lines}`,
+      `tmux capture-pane -t "${name}" -p -e -S -${lines}`,
       { encoding: 'utf-8', stdio: 'pipe' }
     );
-    return stripAnsi(output);
+    return output;
   } catch {
     return '';
   }
