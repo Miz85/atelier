@@ -26,13 +26,14 @@ import type { Workspace } from '../state/workspace.js';
 
 interface AgentPaneProps {
   workspace: Workspace;
+  onBack: () => void;
 }
 
 /**
  * Agent pane with embedded tmux session.
  * Shows real-time terminal content and forwards keystrokes when focused.
  */
-export function AgentPane({ workspace }: AgentPaneProps) {
+export function AgentPane({ workspace, onBack }: AgentPaneProps) {
   const { isFocused } = useFocus({ id: 'agent-pane' });
   const [showHelp] = useAtom(showHelpAtom);
   const { stdout } = useStdout();
@@ -221,8 +222,11 @@ export function AgentPane({ workspace }: AgentPaneProps) {
   useInput((input, key) => {
     if (loading) return;
 
-    // Escape is handled by ThreePaneLayout - don't process here
-    if (key.escape) return;
+    // Escape and 'b' go back to main screen
+    if (key.escape || input === 'b') {
+      onBack();
+      return;
+    }
 
     // Control shortcuts (not forwarded to tmux)
     if (!key.ctrl && !key.meta) {
