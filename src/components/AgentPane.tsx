@@ -1,5 +1,5 @@
 // src/components/AgentPane.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useInput, useFocus } from 'ink';
 import { useAtom, useSetAtom } from 'jotai';
 import { AgentControls } from './AgentControls.js';
@@ -46,6 +46,7 @@ export function AgentPane({ workspace }: AgentPaneProps) {
   const [operation, setOperation] = useState<string | null>(null);
   const [outputPreview, setOutputPreview] = useState<string[]>([]);
   const [attaching, setAttaching] = useState(false);
+  const lastOutputRef = useRef<string>('');
 
   // Derived status for controls (map 'idle' to 'stopped')
   const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
@@ -67,11 +68,14 @@ export function AgentPane({ workspace }: AgentPaneProps) {
         });
       }
 
-      // Update output preview
+      // Update output preview only if content changed
       if (instance?.status === 'running') {
         const output = getAgentOutput(agentState.agentId!, 20);
-        const lines = output.split('\n').filter(line => line.trim());
-        setOutputPreview(lines.slice(-10)); // Last 10 non-empty lines
+        if (output !== lastOutputRef.current) {
+          lastOutputRef.current = output;
+          const lines = output.split('\n').filter(line => line.trim());
+          setOutputPreview(lines.slice(-10)); // Last 10 non-empty lines
+        }
       }
     }, 1000);
 
