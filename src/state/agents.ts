@@ -26,13 +26,13 @@ export interface WorkspaceAgentState {
 export const agentStateByWorkspaceAtom = atom<Map<string, WorkspaceAgentState>>(new Map());
 
 /**
- * Get agent state for a specific workspace.
- * Returns a read-only derived atom for a single workspace's agent state.
- *
- * @param workspaceId - Workspace identifier
- * @returns Atom containing workspace agent state
+ * Cache for workspace agent state atoms.
+ * Ensures same workspace ID always returns the same atom instance,
+ * preventing infinite re-render loops in React components.
  */
-export function getWorkspaceAgentStateAtom(workspaceId: string) {
+const workspaceAgentStateAtomCache = new Map<string, ReturnType<typeof getWorkspaceAgentStateAtomImpl>>();
+
+function getWorkspaceAgentStateAtomImpl(workspaceId: string) {
   return atom((get) => {
     const allStates = get(agentStateByWorkspaceAtom);
     return allStates.get(workspaceId) ?? {
@@ -41,6 +41,23 @@ export function getWorkspaceAgentStateAtom(workspaceId: string) {
       outputLines: [],
     };
   });
+}
+
+/**
+ * Get agent state for a specific workspace.
+ * Returns a read-only derived atom for a single workspace's agent state.
+ * Memoized to prevent infinite render loops.
+ *
+ * @param workspaceId - Workspace identifier
+ * @returns Atom containing workspace agent state
+ */
+export function getWorkspaceAgentStateAtom(workspaceId: string) {
+  let cached = workspaceAgentStateAtomCache.get(workspaceId);
+  if (!cached) {
+    cached = getWorkspaceAgentStateAtomImpl(workspaceId);
+    workspaceAgentStateAtomCache.set(workspaceId, cached);
+  }
+  return cached;
 }
 
 /**
