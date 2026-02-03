@@ -41,9 +41,15 @@ export function HelpScreen({ onClose }: HelpScreenProps) {
         <Text>  Enter         Send Enter to agent</Text>
         <Text>  Ctrl+C        Send interrupt to agent</Text>
         <Text>  Arrows        Navigate in agent</Text>
+        <Text>  Shift+F       Fullscreen (smooth interaction)</Text>
         <Text>  Shift+X       Stop agent</Text>
         <Text>  s             Start agent (when stopped)</Text>
         <Text>  r             Restart agent (when stopped)</Text>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Fullscreen Mode:</Text>
+        <Text>  Ctrl+B D      Detach (return to equipe)</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">

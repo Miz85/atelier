@@ -6,6 +6,7 @@ import {
   spawnAgent,
   stopAgent,
   restartAgent,
+  attachToAgent,
   syncAgentStatus,
   getAgentInstance,
 } from '../agents/spawn.js';
@@ -74,12 +75,14 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     if (!hasSession(workspace.id)) return;
 
     const captureContent = () => {
-      // Capture extra lines to ensure we have enough
-      const content = capturePane(workspace.id, terminalHeight + 10);
-      if (content !== lastContentRef.current) {
-        lastContentRef.current = content;
+      // Capture many more lines to ensure nothing is cut off
+      const content = capturePane(workspace.id, 200);
+      // Normalize content for comparison (trim trailing whitespace from each line)
+      const normalized = content.split('\n').map(l => l.trimEnd()).join('\n');
+      if (normalized !== lastContentRef.current) {
+        lastContentRef.current = normalized;
         const lines = content.split('\n');
-        // Take exactly terminalHeight lines from the end
+        // Take exactly terminalHeight lines from the end, preserving content
         setTerminalContent(lines.slice(-terminalHeight));
       }
     };
@@ -87,13 +90,13 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     // Initial capture
     captureContent();
 
-    // Use adaptive refresh - check focus via ref to avoid interval recreation
+    // Slower refresh to reduce blinking - 500ms focused, 2s unfocused
     const tick = () => {
       captureContent();
-      const delay = isFocusedRef.current ? 200 : 1000;
+      const delay = isFocusedRef.current ? 500 : 2000;
       intervalRef.current = setTimeout(tick, delay);
     };
-    intervalRef.current = setTimeout(tick, 200);
+    intervalRef.current = setTimeout(tick, 500);
 
     return () => {
       if (intervalRef.current) clearTimeout(intervalRef.current);
@@ -195,15 +198,40 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     }
   };
 
+  // Handle fullscreen attach to tmux
+  const handleAttach = () => {
+    if (!agentState.agentId) return;
+    try {
+      attachToAgent(agentState.agentId);
+      // After detach, sync status
+      syncAgentStatus(agentState.agentId);
+      const instance = getAgentInstance(agentState.agentId);
+      if (instance && instance.status !== agentState.status) {
+        setStatus({
+          workspaceId: workspace.id,
+          status: instance.status,
+        });
+      }
+    } catch {
+      // Attachment failed
+    }
+  };
+
   // Forward keystrokes to tmux when focused and agent is running
   useInput((input, key) => {
     if (loading) return;
 
     // Control shortcuts (not forwarded to tmux)
     if (!key.ctrl && !key.meta) {
-      // Stop agent with Ctrl+X (we use 'X' uppercase to avoid conflicts)
+      // Stop agent with Shift+X
       if (input === 'X' && controlStatus === 'running') {
         handleStop();
+        return;
+      }
+
+      // Fullscreen attach with Shift+F (for smooth interaction)
+      if (input === 'F' && controlStatus === 'running') {
+        handleAttach();
         return;
       }
 
@@ -321,7 +349,7 @@ export function AgentPane({ workspace }: AgentPaneProps) {
           <Text color="yellow">Loading...</Text>
         ) : isInteractive ? (
           <Text color="gray" dimColor>
-            Type to interact | Shift+X: stop | Tab: switch pane
+            Type here | Shift+F: fullscreen | Shift+X: stop | Tab: pane
           </Text>
         ) : controlStatus === 'stopped' ? (
           <Text color="gray" dimColor>s: start | r: restart</Text>
