@@ -23,6 +23,7 @@ export function CreateWorkspace({ onBack, onCreated }: CreateWorkspaceProps) {
   const [step, setStep] = useState<'repo' | 'branch' | 'creating' | 'error'>('repo');
   const [repoInput, setRepoInput] = useState(repoPath || '');
   const [branchInput, setBranchInput] = useState('');
+  const [agentOverride, setAgentOverride] = useState<'claude' | 'opencode' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Skip repo step if already set
@@ -37,6 +38,17 @@ export function CreateWorkspace({ onBack, onCreated }: CreateWorkspaceProps) {
     if (key.escape) {
       onBack();
       return;
+    }
+
+    // Tab to cycle agent types when on branch step
+    if (key.tab && step === 'branch') {
+      if (agentOverride === null) {
+        setAgentOverride('claude');
+      } else if (agentOverride === 'claude') {
+        setAgentOverride('opencode');
+      } else {
+        setAgentOverride(null);
+      }
     }
   });
 
@@ -71,7 +83,7 @@ export function CreateWorkspace({ onBack, onCreated }: CreateWorkspaceProps) {
       const workspace = await createWorkspace({
         repoPath: repoPath!,
         branchName: trimmed,
-        agent: settings.defaultAgent,
+        agent: agentOverride ?? settings.defaultAgent,
       });
 
       // Add to state
@@ -128,6 +140,25 @@ export function CreateWorkspace({ onBack, onCreated }: CreateWorkspaceProps) {
           </Box>
           <Text color="gray" dimColor>
             A new branch and worktree will be created
+          </Text>
+          <Box marginTop={1}>
+            <Text>Agent: </Text>
+            <Text bold color="cyan">
+              {agentOverride === 'claude' && '[claude] '}
+              {agentOverride === 'opencode' && '[opencode] '}
+              {agentOverride === null && `[${settings.defaultAgent}] `}
+            </Text>
+            {agentOverride === 'claude' && <Text>opencode</Text>}
+            {agentOverride === 'opencode' && <Text>claude</Text>}
+            {agentOverride === null && (
+              <Text>
+                {settings.defaultAgent === 'claude' ? 'opencode' : 'claude'}
+                <Text color="gray"> (default: {settings.defaultAgent})</Text>
+              </Text>
+            )}
+          </Box>
+          <Text color="gray" dimColor>
+            Tab: cycle agent types
           </Text>
         </Box>
       )}
