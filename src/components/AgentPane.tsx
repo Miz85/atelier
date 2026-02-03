@@ -26,13 +26,14 @@ import type { Workspace } from '../state/workspace.js';
 
 interface AgentPaneProps {
   workspace: Workspace;
+  onBack: () => void;
 }
 
 /**
  * Agent pane with embedded tmux session.
  * Shows real-time terminal content and forwards keystrokes when focused.
  */
-export function AgentPane({ workspace }: AgentPaneProps) {
+export function AgentPane({ workspace, onBack }: AgentPaneProps) {
   const { isFocused } = useFocus({ id: 'agent-pane' });
   const [showHelp] = useAtom(showHelpAtom);
   const { stdout } = useStdout();
@@ -268,7 +269,8 @@ export function AgentPane({ workspace }: AgentPaneProps) {
           // Tab is used for pane navigation, don't forward
           return;
         } else if (key.escape) {
-          // Escape goes back, don't forward
+          // Escape goes back to main screen
+          onBack();
           return;
         } else if (key.ctrl && input === 'c') {
           sendKeys(workspace.id, 'C-c');

@@ -43,7 +43,7 @@ export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
     <Box flexDirection="column" height="100%">
       {/* Top row: Agent (60%) + Diff Summary (40%) */}
       <Box flexDirection="row" flexGrow={1}>
-        <AgentPane workspace={workspace} />
+        <AgentPane workspace={workspace} onBack={onBack} />
         <DiffSummaryPane />
       </Box>
 
