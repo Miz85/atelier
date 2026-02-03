@@ -77,6 +77,9 @@ Recent decisions affecting current work:
 - 03-02: Agent state is ephemeral, not persisted — Agents are processes, not data
 - 03-02: Output lines capped at 1000 — Prevents memory bloat from long-running agents
 - 03-02: Action atoms pattern for state updates — Write-only atoms with useSetAtom for clean separation
+- 03-03: Use Ink's Static component for output — Append-only rendering suitable for streaming
+- 03-03: Keyboard shortcuts s/x/r for agent control — Follows existing single-letter action pattern
+- 03-03: Async loading state during stopAgent — Provides feedback during 5-second graceful shutdown
 
 ### Pending Todos
 
@@ -84,11 +87,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Agent state management complete. Ready for agent UI components.
+None - Phase 3 (Agent Integration) complete. Ready for Phase 4.
 
 ## Session Continuity
 
-Last session: 2026-02-03T14:49:05Z
-Stopped at: Completed 03-02-PLAN.md (Agent state atoms)
+Last session: 2026-02-03T14:49:11Z
+Stopped at: Completed 03-03-PLAN.md (Agent UI components)
 Resume file: None
-Next up: Phase 3 Plan 3 (Agent UI components) - build terminal output display
+Next up: Phase 4 - Next phase in roadmap
