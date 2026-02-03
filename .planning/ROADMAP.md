@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Core infrastructure with process management and state persistence
 - [x] **Phase 2: Workspace Management** - Create and manage isolated git worktrees
-- [ ] **Phase 3: Agent Integration** - Spawn and interact with coding agents
+- [x] **Phase 3: Agent Integration** - Spawn and interact with coding agents
 - [ ] **Phase 4: UI/Navigation** - Three-pane interface with keyboard navigation
 - [ ] **Phase 5: Git Integration** - Diff viewing, IDE integration, and PR management
 
@@ -72,11 +72,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Agent spawn/lifecycle module (types, spawn, stop, restart)
-- [ ] 03-02-PLAN.md — Agent state atoms (per-workspace reactive state)
-- [ ] 03-03-PLAN.md — Agent UI components (AgentOutput, AgentControls)
-- [ ] 03-04-PLAN.md — App integration (AgentView, CreateWorkspace override, wiring)
-- [ ] 03-05-PLAN.md — Human verification of complete agent integration
+- [x] 03-01-PLAN.md — Agent spawn/lifecycle module (types, spawn, stop, restart)
+- [x] 03-02-PLAN.md — Agent state atoms (per-workspace reactive state)
+- [x] 03-03-PLAN.md — Agent UI components (AgentOutput, AgentControls)
+- [x] 03-04-PLAN.md — App integration (AgentView, CreateWorkspace override, wiring)
+- [x] 03-05-PLAN.md — Human verification of complete agent integration
 
 ### Phase 4: UI/Navigation
 **Goal**: Users can navigate three-pane interface with keyboard
@@ -88,10 +88,12 @@ Plans:
   3. User can view keyboard shortcuts with ? key
   4. Focus indicator matches actual input routing (no stuck focus)
   5. UI remains responsive when agent outputs thousands of lines
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD
+- [ ] 04-01-PLAN.md — UI state atoms and HelpScreen component
+- [ ] 04-02-PLAN.md — ThreePaneLayout with focus management and app integration
+- [ ] 04-03-PLAN.md — Human verification of three-pane UI
 
 ### Phase 5: Git Integration
 **Goal**: Users can review changes and manage PRs from workspaces
@@ -117,6 +119,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | 2026-02-02 |
 | 2. Workspace Management | 6/6 | Complete | 2026-02-02 |
-| 3. Agent Integration | 0/5 | Ready | - |
-| 4. UI/Navigation | 0/TBD | Not started | - |
+| 3. Agent Integration | 5/5 | Complete | 2026-02-03 |
+| 4. UI/Navigation | 0/3 | Ready | - |
 | 5. Git Integration | 0/TBD | Not started | - |
