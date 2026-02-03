@@ -5,7 +5,7 @@ import TextInput from 'ink-text-input';
 import { useAtom, useSetAtom } from 'jotai';
 import { AgentOutput } from './AgentOutput.js';
 import { AgentControls } from './AgentControls.js';
-import { spawnAgent, restartAgent, sendInput } from '../agents/spawn.js';
+import { spawnAgent, stopAgent, restartAgent, sendInput } from '../agents/spawn.js';
 import {
   getWorkspaceAgentStateAtom,
   initAgentStateAtom,
@@ -31,12 +31,19 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
   const setStatus = useSetAtom(setStatusAtom);
   const clearOutput = useSetAtom(clearOutputAtom);
 
-  // Input mode state
+  // UI state
   const [inputMode, setInputMode] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [operation, setOperation] = useState<string | null>(null);
+
+  // Derived status for controls (map 'idle' to 'stopped')
+  const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
 
   // Handle agent spawn
   const handleStart = () => {
+    setLoading(true);
+    setOperation('Starting');
     try {
       const instance = spawnAgent(
         workspace.id,
@@ -66,16 +73,44 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      setLoading(false);
+      setOperation(null);
+    }
+  };
+
+  // Handle agent stop
+  const handleStop = async () => {
+    if (!agentState.agentId) return;
+
+    setLoading(true);
+    setOperation('Stopping');
+    try {
+      await stopAgent(agentState.agentId);
+      // Status will be updated by onExit callback
+    } catch (err) {
+      setStatus({
+        workspaceId: workspace.id,
+        status: 'error',
+        error: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setLoading(false);
+      setOperation(null);
     }
   };
 
   // Handle agent restart
-  const handleRestart = (agentId: string) => {
+  const handleRestart = () => {
+    if (!agentState.agentId) return;
+
+    setLoading(true);
+    setOperation('Restarting');
     try {
       // Clear old output
       clearOutput(workspace.id);
 
-      const instance = restartAgent(agentId, {
+      const instance = restartAgent(agentState.agentId, {
         onData: (data) => {
           const lines = data.split('\n').filter(line => line.trim());
           lines.forEach(line => {
@@ -97,12 +132,10 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      setLoading(false);
+      setOperation(null);
     }
-  };
-
-  // Handle agent stop
-  const handleStop = (agentId: string) => {
-    // Status will be updated by onExit callback in spawn
   };
 
   // Handle input submission
@@ -123,8 +156,11 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
     }
   };
 
-  // Keyboard shortcuts
+  // Centralized keyboard handling
   useInput((input, key) => {
+    // Ignore input during loading
+    if (loading) return;
+
     // In input mode, only Escape works
     if (inputMode) {
       if (key.escape) {
@@ -134,8 +170,24 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
       return;
     }
 
+    // Agent controls
+    if (input === 's' && (controlStatus === 'stopped' || controlStatus === 'error')) {
+      handleStart();
+      return;
+    }
+
+    if (input === 'x' && controlStatus === 'running') {
+      handleStop();
+      return;
+    }
+
+    if (input === 'r' && controlStatus === 'stopped' && agentState.agentId) {
+      handleRestart();
+      return;
+    }
+
     // Enter input mode
-    if (input === 'i' && agentState.status === 'running') {
+    if (input === 'i' && controlStatus === 'running') {
       setInputMode(true);
       return;
     }
@@ -162,17 +214,9 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
       {/* Agent Controls */}
       <AgentControls
         agentId={agentState.agentId}
-        status={agentState.status === 'idle' ? 'stopped' : agentState.status}
-        onStart={handleStart}
-        onStop={handleStop}
-        onRestart={handleRestart}
-        onError={(err) => {
-          setStatus({
-            workspaceId: workspace.id,
-            status: 'error',
-            error: err.message,
-          });
-        }}
+        status={controlStatus}
+        loading={loading}
+        operation={operation}
       />
 
       {/* Agent Output */}
@@ -206,7 +250,7 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
       ) : (
         <Box marginTop={1}>
           <Text color="gray">
-            {agentState.status === 'running' && 'i: input mode | '}
+            {controlStatus === 'running' && 'i: input mode | '}
             q: back
           </Text>
         </Box>
