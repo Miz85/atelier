@@ -26,6 +26,9 @@ export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
 
   // Global keyboard shortcuts - always listen for Escape
   useInput((input, key) => {
+    // Debug: uncomment to see key presses
+    // process.stderr.write(`Key: ${JSON.stringify({input, esc: key.escape})}\n`);
+
     // Escape always goes back (even when help showing)
     if (key.escape) {
       if (showHelp) {
@@ -33,6 +36,12 @@ export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
       } else {
         onBack();
       }
+      return;
+    }
+
+    // 'b' as backup for going back
+    if (input === 'b' && !showHelp) {
+      onBack();
       return;
     }
 
