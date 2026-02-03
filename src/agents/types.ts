@@ -23,6 +23,7 @@ export const AgentCommand: Record<AgentType, string> = {
 export interface AgentInstance {
   id: string;                     // Unique agent instance ID
   workspaceId: string;            // Links to Workspace
+  workspacePath: string;          // Filesystem path (for restart)
   type: AgentType;                // Agent type
   pty: BufferedPtyProcess;        // PTY process handle
   status: 'running' | 'stopped' | 'error';  // Current status
