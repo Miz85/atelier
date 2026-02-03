@@ -24,8 +24,21 @@ interface ThreePaneLayoutProps {
 export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
   const [showHelp, setShowHelp] = useAtom(showHelpAtom);
 
-  // Global keyboard shortcuts - only active when help is not showing
+  // Global keyboard shortcuts - always listen for Escape
   useInput((input, key) => {
+    // Escape always goes back (even when help showing)
+    if (key.escape) {
+      if (showHelp) {
+        setShowHelp(false);
+      } else {
+        onBack();
+      }
+      return;
+    }
+
+    // Rest only when help is not showing
+    if (showHelp) return;
+
     // Toggle help screen
     if (input === '?') {
       setShowHelp(true);
@@ -33,17 +46,17 @@ export function ThreePaneLayout({ workspace, onBack }: ThreePaneLayoutProps) {
     }
 
     // Go back to main screen
-    if (input === 'q' || key.escape) {
+    if (input === 'q') {
       onBack();
       return;
     }
-  }, { isActive: !showHelp });
+  });
 
   return (
     <Box flexDirection="column" height="100%">
       {/* Top row: Agent (60%) + Diff Summary (40%) */}
       <Box flexDirection="row" flexGrow={1}>
-        <AgentPane workspace={workspace} onBack={onBack} />
+        <AgentPane workspace={workspace} />
         <DiffSummaryPane />
       </Box>
 
