@@ -100,7 +100,16 @@ function AppContent() {
       setScreen('main');
       return null;
     }
-    return <ThreePaneLayout workspace={activeWorkspace} onBack={() => setScreen('main')} />;
+    return (
+      <ThreePaneLayout
+        workspace={activeWorkspace}
+        onBack={() => {
+          // Clear screen to force refresh
+          process.stdout.write('\x1b[2J\x1b[H');
+          setScreen('main');
+        }}
+      />
+    );
   }
 
   // Main screen
