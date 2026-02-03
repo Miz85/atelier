@@ -1,17 +1,21 @@
 // src/components/AgentView.tsx
-import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
-import TextInput from 'ink-text-input';
+import React, { useState, useEffect } from 'react';
+import { Box, Text, useInput, useApp } from 'ink';
 import { useAtom, useSetAtom } from 'jotai';
-import { AgentOutput } from './AgentOutput.js';
 import { AgentControls } from './AgentControls.js';
-import { spawnAgent, stopAgent, restartAgent, sendInput } from '../agents/spawn.js';
+import {
+  spawnAgent,
+  stopAgent,
+  restartAgent,
+  attachToAgent,
+  getAgentOutput,
+  syncAgentStatus,
+  getAgentInstance,
+} from '../agents/spawn.js';
 import {
   getWorkspaceAgentStateAtom,
   initAgentStateAtom,
-  appendOutputAtom,
   setStatusAtom,
-  clearOutputAtom,
 } from '../state/agents.js';
 import type { Workspace } from '../state/workspace.js';
 
@@ -21,24 +25,52 @@ interface AgentViewProps {
 }
 
 export function AgentView({ workspace, onBack }: AgentViewProps) {
+  const { exit } = useApp();
+
   // Agent state for this workspace
   const workspaceAgentStateAtom = getWorkspaceAgentStateAtom(workspace.id);
   const [agentState] = useAtom(workspaceAgentStateAtom);
 
   // Action atoms
   const initAgentState = useSetAtom(initAgentStateAtom);
-  const appendOutput = useSetAtom(appendOutputAtom);
   const setStatus = useSetAtom(setStatusAtom);
-  const clearOutput = useSetAtom(clearOutputAtom);
 
   // UI state
-  const [inputMode, setInputMode] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [operation, setOperation] = useState<string | null>(null);
+  const [outputPreview, setOutputPreview] = useState<string[]>([]);
+  const [attaching, setAttaching] = useState(false);
 
   // Derived status for controls (map 'idle' to 'stopped')
   const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
+
+  // Periodically sync status and fetch output preview
+  useEffect(() => {
+    if (!agentState.agentId) return;
+
+    const interval = setInterval(() => {
+      // Sync status from tmux
+      syncAgentStatus(agentState.agentId!);
+
+      // Check if status changed
+      const instance = getAgentInstance(agentState.agentId!);
+      if (instance && instance.status !== agentState.status) {
+        setStatus({
+          workspaceId: workspace.id,
+          status: instance.status,
+        });
+      }
+
+      // Update output preview
+      if (instance?.status === 'running') {
+        const output = getAgentOutput(agentState.agentId!, 20);
+        const lines = output.split('\n').filter(line => line.trim());
+        setOutputPreview(lines.slice(-10)); // Last 10 non-empty lines
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [agentState.agentId, agentState.status, workspace.id, setStatus]);
 
   // Handle agent spawn
   const handleStart = () => {
@@ -48,21 +80,7 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
       const instance = spawnAgent(
         workspace.id,
         workspace.path,
-        workspace.agent,
-        {
-          onData: (data) => {
-            // Split by lines and append each
-            const lines = data.split('\n').filter(line => line.trim());
-            lines.forEach(line => {
-              appendOutput({ workspaceId: workspace.id, line });
-            });
-          },
-          onExit: (exitCode, signal) => {
-            const status = exitCode === 0 ? 'stopped' : 'error';
-            const error = exitCode !== 0 ? `Agent exited with code ${exitCode}` : undefined;
-            setStatus({ workspaceId: workspace.id, status, error });
-          },
-        }
+        workspace.agent
       );
 
       // Initialize agent state in Jotai
@@ -87,7 +105,11 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
     setOperation('Stopping');
     try {
       await stopAgent(agentState.agentId);
-      // Status will be updated by onExit callback
+      setStatus({
+        workspaceId: workspace.id,
+        status: 'stopped',
+      });
+      setOutputPreview([]);
     } catch (err) {
       setStatus({
         workspaceId: workspace.id,
@@ -107,25 +129,9 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
     setLoading(true);
     setOperation('Restarting');
     try {
-      // Clear old output
-      clearOutput(workspace.id);
-
-      const instance = restartAgent(agentState.agentId, {
-        onData: (data) => {
-          const lines = data.split('\n').filter(line => line.trim());
-          lines.forEach(line => {
-            appendOutput({ workspaceId: workspace.id, line });
-          });
-        },
-        onExit: (exitCode, signal) => {
-          const status = exitCode === 0 ? 'stopped' : 'error';
-          const error = exitCode !== 0 ? `Agent exited with code ${exitCode}` : undefined;
-          setStatus({ workspaceId: workspace.id, status, error });
-        },
-      });
-
-      // Update agent state with new instance
+      const instance = restartAgent(agentState.agentId);
       initAgentState({ workspaceId: workspace.id, agentId: instance.id });
+      setOutputPreview([]);
     } catch (err) {
       setStatus({
         workspaceId: workspace.id,
@@ -138,57 +144,64 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
     }
   };
 
-  // Handle input submission
-  const handleInputSubmit = (value: string) => {
-    if (!agentState.agentId) return;
+  // Handle attaching to tmux session
+  const handleAttach = () => {
+    if (!agentState.agentId || attaching) return;
+
+    setAttaching(true);
 
     try {
-      sendInput(agentState.agentId, value);
-      setInputValue('');
-      setInputMode(false);
+      // This will take over the terminal until user detaches (Ctrl+B D)
+      // spawnSync blocks completely, so Ink won't interfere
+      attachToAgent(agentState.agentId);
+
+      // After detach, sync status (agent may have exited)
+      syncAgentStatus(agentState.agentId);
+      const instance = getAgentInstance(agentState.agentId);
+      if (instance && instance.status !== agentState.status) {
+        setStatus({
+          workspaceId: workspace.id,
+          status: instance.status,
+        });
+      }
     } catch (err) {
+      // Attachment failed or session ended
       setStatus({
         workspaceId: workspace.id,
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
       });
-      setInputMode(false);
+    } finally {
+      setAttaching(false);
     }
   };
 
   // Centralized keyboard handling
   useInput((input, key) => {
-    // Ignore input during loading
-    if (loading) return;
+    // Ignore input during loading or attaching
+    if (loading || attaching) return;
 
-    // In input mode, only Escape works
-    if (inputMode) {
-      if (key.escape) {
-        setInputMode(false);
-        setInputValue('');
-      }
-      return;
-    }
-
-    // Agent controls
+    // Start agent
     if (input === 's' && (controlStatus === 'stopped' || controlStatus === 'error')) {
       handleStart();
       return;
     }
 
+    // Stop agent
     if (input === 'x' && controlStatus === 'running') {
       handleStop();
       return;
     }
 
-    if (input === 'r' && controlStatus === 'stopped' && agentState.agentId) {
+    // Restart agent
+    if (input === 'r' && controlStatus === 'stopped') {
       handleRestart();
       return;
     }
 
-    // Enter input mode
-    if (input === 'i' && controlStatus === 'running') {
-      setInputMode(true);
+    // Attach to agent session
+    if (key.return && controlStatus === 'running') {
+      handleAttach();
       return;
     }
 
@@ -208,7 +221,10 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
       </Box>
 
       <Box marginBottom={1}>
-        <Text>Agent: {workspace.agent}</Text>
+        <Text>Agent: {workspace.agent} | Status: </Text>
+        <Text color={controlStatus === 'running' ? 'green' : controlStatus === 'error' ? 'red' : 'yellow'}>
+          {controlStatus.toUpperCase()}
+        </Text>
       </Box>
 
       {/* Agent Controls */}
@@ -219,11 +235,22 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
         operation={operation}
       />
 
-      {/* Agent Output */}
-      <AgentOutput
-        outputLines={agentState.outputLines}
-        maxVisibleLines={100}
-      />
+      {/* Output Preview */}
+      {controlStatus === 'running' && outputPreview.length > 0 && (
+        <Box
+          flexDirection="column"
+          marginTop={1}
+          borderStyle="single"
+          borderColor="gray"
+          paddingX={1}
+          height={12}
+        >
+          <Text color="gray" dimColor>Output preview (last 10 lines):</Text>
+          {outputPreview.map((line, i) => (
+            <Text key={i} wrap="truncate">{line}</Text>
+          ))}
+        </Box>
+      )}
 
       {/* Error display */}
       {agentState.error && (
@@ -232,29 +259,23 @@ export function AgentView({ workspace, onBack }: AgentViewProps) {
         </Box>
       )}
 
-      {/* Input mode */}
-      {inputMode ? (
-        <Box marginTop={1} flexDirection="column">
-          <Text color="cyan">Input mode (send to agent):</Text>
-          <Box>
-            <Text color="gray">&gt; </Text>
-            <TextInput
-              value={inputValue}
-              onChange={setInputValue}
-              onSubmit={handleInputSubmit}
-              placeholder="Type message..."
-            />
+      {/* Instructions */}
+      <Box marginTop={1} flexDirection="column">
+        {controlStatus === 'running' && (
+          <Box marginBottom={1}>
+            <Text color="green" bold>Press Enter to attach to agent session</Text>
           </Box>
-          <Text color="gray" dimColor>Esc: cancel</Text>
-        </Box>
-      ) : (
-        <Box marginTop={1}>
-          <Text color="gray">
-            {controlStatus === 'running' && 'i: input mode | '}
-            q: back
-          </Text>
-        </Box>
-      )}
+        )}
+        <Text color="gray">
+          {controlStatus === 'stopped' && 's: start | r: restart | '}
+          {controlStatus === 'running' && 'x: stop | Enter: attach | '}
+          {controlStatus === 'error' && 's: retry | '}
+          q: back
+        </Text>
+        {controlStatus === 'running' && (
+          <Text color="gray" dimColor>Ctrl+B D detaches from agent session</Text>
+        )}
+      </Box>
     </Box>
   );
 }

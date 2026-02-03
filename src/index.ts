@@ -3,6 +3,15 @@ import React from 'react';
 import { render } from 'ink';
 import { App } from './app.js';
 import { setupGracefulShutdown } from './processes/lifecycle.js';
+import { checkTmuxAvailable } from './agents/tmux.js';
+
+// Check tmux availability before starting
+try {
+  checkTmuxAvailable();
+} catch (error) {
+  console.error('[equipe] Error:', error instanceof Error ? error.message : error);
+  process.exit(1);
+}
 
 // CRITICAL: Setup shutdown handlers BEFORE any rendering
 // This ensures cleanup runs even if app crashes during startup
