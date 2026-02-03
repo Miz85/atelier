@@ -2,7 +2,7 @@
 import { nanoid } from 'nanoid';
 import { dirname, join } from 'node:path';
 import { realpathSync } from 'node:fs';
-import { addWorktree, removeWorktree, listWorktrees, type GitWorktree } from './git-worktree.js';
+import { addWorktree, removeWorktree, deleteBranch, listWorktrees, type GitWorktree } from './git-worktree.js';
 import { processRegistry } from '../processes/cleanup.js';
 import type { Workspace } from '../state/workspace.js';
 import type { Settings } from '../state/settings.js';
@@ -104,6 +104,10 @@ export async function deleteWorkspace(
 
   // Remove git worktree
   await removeWorktree(repoPath, workspace.path);
+
+  // Delete the branch to allow re-creation with same name
+  // Use force delete since the branch was just checked out in the worktree
+  await deleteBranch(repoPath, workspace.branch, true);
 }
 
 /**

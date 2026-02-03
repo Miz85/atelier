@@ -208,3 +208,36 @@ export async function removeWorktree(
     }
   }
 }
+
+/**
+ * Delete a git branch.
+ * Used to clean up branches after removing their worktrees.
+ *
+ * @param repoPath - Absolute path to the git repository
+ * @param branchName - Name of the branch to delete
+ * @param force - Use -D (force delete) instead of -d (default: false)
+ */
+export async function deleteBranch(
+  repoPath: string,
+  branchName: string,
+  force: boolean = false
+): Promise<void> {
+  try {
+    const flag = force ? '-D' : '-d';
+    await $({ cwd: repoPath })`git branch ${flag} ${branchName}`;
+  } catch (error: any) {
+    const stderr = error.stderr || '';
+
+    if (stderr.includes("not fully merged")) {
+      throw new Error(
+        `Failed to delete branch '${branchName}': branch is not fully merged. ` +
+        `Use force delete to remove anyway.`
+      );
+    } else if (stderr.includes("not found")) {
+      // Branch doesn't exist, that's fine
+      return;
+    } else {
+      throw new Error(`Failed to delete branch: ${stderr || error.message}`);
+    }
+  }
+}
