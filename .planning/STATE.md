@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 
 ## Current Position
 
-Phase: 2 of 5 (Workspace Management)
-Plan: 6 of 6 in current phase
-Status: Phase complete (verified)
-Last activity: 2026-02-02 — Completed 02-06-PLAN.md (Gap closure: worktree sync)
+Phase: 3 of 5 (Agent Integration)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-03 — Completed 03-01-PLAN.md (Agent spawn infrastructure)
 
-Progress: [██████████] 100% (Phase 2 complete)
+Progress: [███████████░░] 73% (11 of 15 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 11.2 min
+- Total plans completed: 11
+- Average duration: 10.2 min
 - Total execution time: 1.9 hours
 
 **By Phase:**
@@ -29,9 +29,10 @@ Progress: [██████████] 100% (Phase 2 complete)
 |-------|-------|-------|----------|
 | 01-foundation | 4 | 13.0 min | 3.2 min |
 | 02-workspace-management | 6 | 99.4 min | 16.6 min |
+| 03-agent-integration | 1 | 2.0 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (3.0m), 02-04 (1.4m), 02-05 (89.0m), 02-06 (2.0m)
+- Last 5 plans: 02-04 (1.4m), 02-05 (89.0m), 02-06 (2.0m), 03-01 (2.0m)
 - Note: 02-05 included human verification with 3 bug fixes, much longer than typical auto plans
 
 *Updated after each plan completion*
@@ -69,6 +70,10 @@ Recent decisions affecting current work:
 - 02-05: Return to main screen after workspace selection — Immediate feedback of active workspace change
 - 02-06: Sync only on repoPath changes, not workspaces changes — Prevents infinite loop in useEffect
 - 02-06: Derive workspace name from last branch segment — feature/test → test (simple and predictable)
+- 03-01: Agent instances in-memory only — Agents are ephemeral processes, not persisted
+- 03-01: PTY requires \r not \n — Terminal protocol requires carriage return for Enter key
+- 03-01: 5-second graceful shutdown — SIGTERM first, then SIGKILL if needed (consistent with cleanup.ts)
+- 03-01: Store workspacePath in AgentInstance — Required for restart functionality
 
 ### Pending Todos
 
@@ -76,11 +81,11 @@ None yet.
 
 ### Blockers/Concerns
 
-None - Phase 2 complete. Ready for Phase 3 (Agent Integration).
+None - Agent spawn infrastructure complete. Ready for agent UI components.
 
 ## Session Continuity
 
-Last session: 2026-02-02T22:14:46Z
-Stopped at: Completed 02-06-PLAN.md (Workspace Sync) - Phase 2 complete
+Last session: 2026-02-03T08:45:37Z
+Stopped at: Completed 03-01-PLAN.md (Agent spawn infrastructure)
 Resume file: None
-Next up: Begin Phase 3 (Agent Integration) - workspace infrastructure ready for agent launching
+Next up: Phase 3 Plan 2 (Agent UI components) - build terminal output display
