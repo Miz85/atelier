@@ -69,10 +69,14 @@ Plans:
   4. User can stop a running agent
   5. User can restart a stopped agent
   6. User can override default agent when creating workspace
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD
+- [ ] 03-01-PLAN.md — Agent spawn/lifecycle module (types, spawn, stop, restart)
+- [ ] 03-02-PLAN.md — Agent state atoms (per-workspace reactive state)
+- [ ] 03-03-PLAN.md — Agent UI components (AgentOutput, AgentControls)
+- [ ] 03-04-PLAN.md — App integration (AgentView, CreateWorkspace override, wiring)
+- [ ] 03-05-PLAN.md — Human verification of complete agent integration
 
 ### Phase 4: UI/Navigation
 **Goal**: Users can navigate three-pane interface with keyboard
@@ -113,6 +117,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete | 2026-02-02 |
 | 2. Workspace Management | 6/6 | Complete | 2026-02-02 |
-| 3. Agent Integration | 0/TBD | Not started | - |
+| 3. Agent Integration | 0/5 | Ready | - |
 | 4. UI/Navigation | 0/TBD | Not started | - |
 | 5. Git Integration | 0/TBD | Not started | - |
