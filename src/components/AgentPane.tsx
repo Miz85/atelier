@@ -222,6 +222,12 @@ export function AgentPane({ workspace, onBack }: AgentPaneProps) {
   useInput((input, key) => {
     if (loading) return;
 
+    // Escape always goes back
+    if (key.escape) {
+      onBack();
+      return;
+    }
+
     // Control shortcuts (not forwarded to tmux)
     if (!key.ctrl && !key.meta) {
       // Stop agent with Shift+X
@@ -267,10 +273,6 @@ export function AgentPane({ workspace, onBack }: AgentPaneProps) {
           sendKeys(workspace.id, 'Right');
         } else if (key.tab) {
           // Tab is used for pane navigation, don't forward
-          return;
-        } else if (key.escape) {
-          // Escape goes back to main screen
-          onBack();
           return;
         } else if (key.ctrl && input === 'c') {
           sendKeys(workspace.id, 'C-c');
