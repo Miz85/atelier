@@ -54,7 +54,10 @@ export function AgentPane({ workspace }: AgentPaneProps) {
   const controlStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
 
   // Calculate available height for terminal content
-  const terminalHeight = Math.max(10, (stdout?.rows || 24) - 10);
+  // Account for: top pane takes ~70% of height, minus header (2 lines) and status bar (2 lines)
+  const totalRows = stdout?.rows || 24;
+  const topPaneRows = Math.floor(totalRows * 0.7);
+  const terminalHeight = Math.max(5, topPaneRows - 4); // -4 for header, status bar, borders
 
   // Resize tmux session to match pane dimensions
   useEffect(() => {
@@ -71,10 +74,12 @@ export function AgentPane({ workspace }: AgentPaneProps) {
     if (!hasSession(workspace.id)) return;
 
     const captureContent = () => {
-      const content = capturePane(workspace.id, terminalHeight);
+      // Capture extra lines to ensure we have enough
+      const content = capturePane(workspace.id, terminalHeight + 10);
       if (content !== lastContentRef.current) {
         lastContentRef.current = content;
         const lines = content.split('\n');
+        // Take exactly terminalHeight lines from the end
         setTerminalContent(lines.slice(-terminalHeight));
       }
     };
@@ -287,10 +292,10 @@ export function AgentPane({ workspace }: AgentPaneProps) {
         </Box>
       </Box>
 
-      {/* Terminal content */}
+      {/* Terminal content - fixed height to prevent layout shifts */}
       <Box
         flexDirection="column"
-        flexGrow={1}
+        height={terminalHeight}
         paddingX={1}
         overflow="hidden"
       >
