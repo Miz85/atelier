@@ -49,10 +49,12 @@ export function spawnAgent(
   const commandName = AgentCommand[agentType];
   const command = resolveCommandPath(commandName);
 
-  // Spawn PTY process
+  // Spawn PTY process through shell to ensure proper environment
+  // This handles Volta shims and other env-dependent commands
+  const shell = process.env.SHELL || '/bin/bash';
   const pty = new BufferedPtyProcess({
-    command,
-    args: [],
+    command: shell,
+    args: ['-ilc', command],  // -i: interactive (loads profile), -l: login shell, -c: command
     cwd: workspacePath,
     cols: process.stdout.columns || 80,
     rows: process.stdout.rows || 30,
