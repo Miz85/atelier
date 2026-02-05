@@ -12,7 +12,7 @@ import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
 import { initAgentStateAtom } from './state/agents.js';
 import { syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace/workspace-manager.js';
-import { spawnAgent, attachToAgent, getAgentInstance } from './agents/spawn.js';
+import { spawnAgent, attachToAgent, getAgentByWorkspace } from './agents/spawn.js';
 import { hasSession as hasAgentSession, createSession } from './agents/tmux.js';
 import {
   createTerminalSession,
@@ -78,22 +78,17 @@ function AppContent() {
   // Handler functions
   const handleAttachAgent = (workspace: Workspace) => {
     try {
-      // Check if agent is already running
-      const agentInstance = getAgentInstance(workspace.id);
+      // Check if agent is already running (use workspace ID to look up)
+      const agentInstance = getAgentByWorkspace(workspace.id);
 
       if (!agentInstance || !hasAgentSession(workspace.id)) {
         // Start agent if not running
         const instance = spawnAgent(workspace.id, workspace.path, workspace.agent);
         initAgentState({ workspaceId: workspace.id, agentId: instance.id });
+      }
 
-        // Small delay to let the agent start
-        setTimeout(() => {
-          if (hasAgentSession(workspace.id)) {
-            attachSession(workspace.id);
-          }
-        }, 500);
-      } else {
-        // Agent already running, just attach
+      // Attach to session (synchronous, blocks until user detaches)
+      if (hasAgentSession(workspace.id)) {
         attachSession(workspace.id);
       }
     } catch (err) {
