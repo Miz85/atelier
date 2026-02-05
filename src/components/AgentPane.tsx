@@ -1,6 +1,6 @@
 // src/components/AgentPane.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useInput, useFocus, useStdout } from 'ink';
+import { Box, Text, useInput, useFocus, useFocusManager, useStdout } from 'ink';
 import { useAtom, useSetAtom } from 'jotai';
 import {
   spawnAgent,
@@ -34,9 +34,15 @@ interface AgentPaneProps {
  * Shows real-time terminal content and forwards keystrokes when focused.
  */
 export function AgentPane({ workspace, onBack }: AgentPaneProps) {
-  const { isFocused } = useFocus({ id: 'agent-pane' });
+  const { isFocused } = useFocus({ id: 'agent-pane', autoFocus: true });
+  const { focus } = useFocusManager();
   const [showHelp] = useAtom(showHelpAtom);
   const { stdout } = useStdout();
+
+  // Force focus on mount to handle remount scenarios
+  useEffect(() => {
+    focus('agent-pane');
+  }, [focus]);
 
   // Agent state for this workspace
   const workspaceAgentStateAtom = getWorkspaceAgentStateAtom(workspace.id);
@@ -353,7 +359,7 @@ export function AgentPane({ workspace, onBack }: AgentPaneProps) {
           <Text color="yellow">Loading...</Text>
         ) : isInteractive ? (
           <Text color="gray" dimColor>
-            Type here | Shift+F: fullscreen | Shift+X: stop | Tab: pane
+            <Text color="cyan">▊</Text> Type here | Shift+F: fullscreen | Shift+X: stop | Tab: pane
           </Text>
         ) : controlStatus === 'stopped' ? (
           <Text color="gray" dimColor>s: start | r: restart</Text>

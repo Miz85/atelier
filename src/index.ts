@@ -14,25 +14,13 @@ try {
 }
 
 // CRITICAL: Setup shutdown handlers BEFORE any rendering
-// This ensures cleanup runs even if app crashes during startup
-setupGracefulShutdown(async () => {
-  // Exit alternate screen buffer on crash/signal
-  process.stdout.write('\x1b[?1049l');
-});
+setupGracefulShutdown(async () => {});
 
-// Enter alternate screen buffer (fullscreen mode)
-process.stdout.write('\x1b[?1049h');
-process.stdout.write('\x1b[H'); // Move cursor to top-left
-
-// Render Ink app
+// Render Ink app (no alternate screen for now - debugging)
 const app = render(React.createElement(App));
 
-// Wait for exit and restore terminal
-app.waitUntilExit().then(() => {
-  // Exit alternate screen buffer (restore previous terminal content)
-  process.stdout.write('\x1b[?1049l');
-}).catch((error) => {
-  process.stdout.write('\x1b[?1049l');
+// Wait for exit
+app.waitUntilExit().catch((error) => {
   console.error('[equipe] Exit error:', error);
   process.exit(1);
 });

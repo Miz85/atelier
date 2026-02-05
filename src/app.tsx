@@ -5,30 +5,33 @@ import { Provider, useAtom, useSetAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
 import { CreateWorkspace } from './components/CreateWorkspace.js';
 import { WorkspaceList } from './components/WorkspaceList.js';
-import { ThreePaneLayout } from './components/ThreePaneLayout.js';
 import { WorkspaceTable } from './components/WorkspaceTable.js';
 import { DetailedDiffView } from './components/DetailedDiffView.js';
-import { workspacesAtom, activeWorkspaceAtom, repoPathAtom, type Workspace } from './state/workspace.js';
+import { workspacesAtom, activeWorkspaceIdAtom, activeWorkspaceAtom, repoPathAtom, type Workspace } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
+import { initAgentStateAtom } from './state/agents.js';
 import { syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace/workspace-manager.js';
-import { attachToAgent } from './agents/spawn.js';
+import { spawnAgent, attachToAgent, getAgentInstance } from './agents/spawn.js';
+import { hasSession as hasAgentSession, createSession } from './agents/tmux.js';
 import {
   createTerminalSession,
   hasTerminalSession,
-  attachTerminalSession
+  attachTerminalSession,
+  attachSession
 } from './agents/tmux.js';
 
-type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'workspace-view' | 'diff-view';
+type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'diff-view';
 
 function AppContent() {
   const { exit } = useApp();
   const [screen, setScreen] = useState<Screen>('main');
   const [workspaces, setWorkspaces] = useAtom(workspacesAtom);
   const [settings] = useAtom(settingsAtom);
-  const [activeWorkspace] = useAtom(activeWorkspaceAtom);
+  const [activeWorkspace, setActiveWorkspaceId] = useAtom(activeWorkspaceIdAtom);
   const [repoPath] = useAtom(repoPathAtom);
   const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
+  const initAgentState = useSetAtom(initAgentStateAtom);
 
   // Sync workspaces from git worktrees when repoPath is set or changes
   useEffect(() => {
@@ -75,10 +78,24 @@ function AppContent() {
   // Handler functions
   const handleAttachAgent = (workspace: Workspace) => {
     try {
-      const agentId = workspace.id; // Agent ID is workspace ID
-      attachToAgent(agentId);
-      // After detach, clear screen
-      process.stdout.write('\x1b[2J\x1b[H');
+      // Check if agent is already running
+      const agentInstance = getAgentInstance(workspace.id);
+
+      if (!agentInstance || !hasAgentSession(workspace.id)) {
+        // Start agent if not running
+        const instance = spawnAgent(workspace.id, workspace.path, workspace.agent);
+        initAgentState({ workspaceId: workspace.id, agentId: instance.id });
+
+        // Small delay to let the agent start
+        setTimeout(() => {
+          if (hasAgentSession(workspace.id)) {
+            attachSession(workspace.id);
+          }
+        }, 500);
+      } else {
+        // Agent already running, just attach
+        attachSession(workspace.id);
+      }
     } catch (err) {
       // Attachment failed - silent for now
     }
@@ -108,7 +125,9 @@ function AppContent() {
   };
 
   const handleOpenWorkspaceView = (workspace: Workspace) => {
-    setScreen('workspace-view');
+    // Set as active workspace and attach to agent
+    setActiveWorkspaceId(workspace.id);
+    handleAttachAgent(workspace);
   };
 
   // Global quit shortcut
@@ -128,19 +147,6 @@ function AppContent() {
 
   if (screen === 'workspace-list') {
     return <WorkspaceList onBack={() => setScreen('main')} />;
-  }
-
-  if (screen === 'workspace-view') {
-    if (!activeWorkspace) {
-      setScreen('main');
-      return null;
-    }
-    return (
-      <ThreePaneLayout
-        workspace={activeWorkspace}
-        onBack={() => setScreen('main')}
-      />
-    );
   }
 
   if (screen === 'diff-view') {
