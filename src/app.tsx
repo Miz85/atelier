@@ -1,16 +1,25 @@
 // src/app.tsx
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
-import { Provider, useAtom } from 'jotai';
+import { Provider, useAtom, useSetAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
 import { CreateWorkspace } from './components/CreateWorkspace.js';
 import { WorkspaceList } from './components/WorkspaceList.js';
 import { ThreePaneLayout } from './components/ThreePaneLayout.js';
-import { workspacesAtom, activeWorkspaceAtom, repoPathAtom } from './state/workspace.js';
+import { WorkspaceTable } from './components/WorkspaceTable.js';
+import { DetailedDiffView } from './components/DetailedDiffView.js';
+import { workspacesAtom, activeWorkspaceAtom, repoPathAtom, type Workspace } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
+import { diffViewStateAtom } from './state/diff.js';
 import { syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace/workspace-manager.js';
+import { attachToAgent } from './agents/spawn.js';
+import {
+  createTerminalSession,
+  hasTerminalSession,
+  attachTerminalSession
+} from './agents/tmux.js';
 
-type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'workspace-view';
+type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'workspace-view' | 'diff-view';
 
 function AppContent() {
   const { exit } = useApp();
@@ -19,6 +28,7 @@ function AppContent() {
   const [settings] = useAtom(settingsAtom);
   const [activeWorkspace] = useAtom(activeWorkspaceAtom);
   const [repoPath] = useAtom(repoPathAtom);
+  const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
 
   // Sync workspaces from git worktrees when repoPath is set or changes
   useEffect(() => {
@@ -62,22 +72,47 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoPath]);
 
-  useInput((input, key) => {
-    if (screen !== 'main') return;
+  // Handler functions
+  const handleAttachAgent = (workspace: Workspace) => {
+    try {
+      const agentId = workspace.id; // Agent ID is workspace ID
+      attachToAgent(agentId);
+      // After detach, clear screen
+      process.stdout.write('\x1b[2J\x1b[H');
+    } catch (err) {
+      // Attachment failed - silent for now
+    }
+  };
 
-    // Global shortcuts
-    if (input === 'n') {
-      setScreen('create-workspace');
+  const handleAttachTerminal = (workspace: Workspace) => {
+    try {
+      // Create session if it doesn't exist
+      if (!hasTerminalSession(workspace.id)) {
+        createTerminalSession(workspace.id, workspace.path);
+      }
+
+      // Attach to session (blocking)
+      attachTerminalSession(workspace.id);
+    } catch (err) {
+      // Attachment failed - silent for now
     }
-    if (input === 'w') {
-      setScreen('workspace-list');
-    }
-    if (input === 's') {
-      setScreen('settings');
-    }
-    if (input === 'a' && activeWorkspace) {
-      setScreen('workspace-view');
-    }
+  };
+
+  const handleOpenDiffView = (workspace: Workspace) => {
+    setDiffViewState({
+      workspaceId: workspace.id,
+      selectedFilePath: null,
+      selectedFileContent: null,
+    });
+    setScreen('diff-view');
+  };
+
+  const handleOpenWorkspaceView = (workspace: Workspace) => {
+    setScreen('workspace-view');
+  };
+
+  // Global quit shortcut
+  useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c')) {
       exit();
     }
@@ -103,42 +138,36 @@ function AppContent() {
     return (
       <ThreePaneLayout
         workspace={activeWorkspace}
-        onBack={() => {
-          // Clear screen to force refresh
-          process.stdout.write('\x1b[2J\x1b[H');
-          setScreen('main');
-        }}
+        onBack={() => setScreen('main')}
       />
     );
   }
 
-  // Main screen
+  if (screen === 'diff-view') {
+    // Find the workspace from diffViewState
+    const workspace = workspaces.find(w => w.id === diffViewState?.workspaceId);
+    if (!workspace) {
+      setScreen('main');
+      return null;
+    }
+    return (
+      <DetailedDiffView
+        workspace={workspace}
+        onBack={() => setScreen('main')}
+      />
+    );
+  }
+
+  // Main screen - WorkspaceTable
   return (
-    <Box flexDirection="column" padding={1}>
-      <Box marginBottom={1}>
-        <Text bold color="cyan">equipe</Text>
-        <Text color="gray"> - Coding Agent Workspace Manager</Text>
-      </Box>
-
-      <Box marginBottom={1} flexDirection="column">
-        <Text>Workspaces: {workspaces.length}</Text>
-        {activeWorkspace ? (
-          <Text color="green">Active: {activeWorkspace.name} ({activeWorkspace.branch})</Text>
-        ) : (
-          <Text color="yellow">No active workspace</Text>
-        )}
-        <Text>Default Agent: {settings.defaultAgent}</Text>
-        <Text>IDE: {settings.ideCommand}</Text>
-        {repoPath && <Text color="gray">Repo: {repoPath}</Text>}
-      </Box>
-
-      <Box marginTop={1} flexDirection="column">
-        <Text color="gray">
-          n: new workspace | w: list workspaces | s: settings
-          {activeWorkspace && ' | a: workspace view'} | q: quit
-        </Text>
-      </Box>
-    </Box>
+    <WorkspaceTable
+      onCreateWorkspace={() => setScreen('create-workspace')}
+      onSettings={() => setScreen('settings')}
+      onOpenDiffView={handleOpenDiffView}
+      onAttachAgent={handleAttachAgent}
+      onAttachTerminal={handleAttachTerminal}
+      onOpenWorkspaceView={handleOpenWorkspaceView}
+    />
   );
 }
 

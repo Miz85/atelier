@@ -222,3 +222,100 @@ export function resizeSession(workspaceId: string): void {
     // Resize may fail if session is in certain states, ignore
   }
 }
+
+// ============================================================================
+// Terminal Session Management (separate from agent sessions)
+// ============================================================================
+
+/**
+ * Generate a terminal tmux session name from workspace ID.
+ * Terminal sessions are separate from agent sessions.
+ */
+export function terminalSessionName(workspaceId: string): string {
+  return `equipe-terminal-${workspaceId}`;
+}
+
+/**
+ * Check if a terminal tmux session exists.
+ */
+export function hasTerminalSession(workspaceId: string): boolean {
+  try {
+    execSync(`tmux has-session -t "${terminalSessionName(workspaceId)}" 2>/dev/null`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create a new terminal tmux session for a workspace.
+ * This starts a plain shell (no agent command).
+ *
+ * @param workspaceId - Workspace identifier
+ * @param cwd - Working directory for the session
+ */
+export function createTerminalSession(
+  workspaceId: string,
+  cwd: string
+): void {
+  const name = terminalSessionName(workspaceId);
+
+  // Kill existing session if any
+  if (hasTerminalSession(workspaceId)) {
+    killTerminalSession(workspaceId);
+  }
+
+  // Create detached session with a shell
+  execSync(
+    `tmux new-session -d -s "${name}" -c "${cwd}"`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+}
+
+/**
+ * Attach to a terminal tmux session.
+ * This takes over the terminal until the user detaches (Ctrl+B D).
+ *
+ * @param workspaceId - Workspace identifier
+ */
+export function attachTerminalSession(workspaceId: string): void {
+  const name = terminalSessionName(workspaceId);
+
+  if (!hasTerminalSession(workspaceId)) {
+    throw new Error(`No terminal tmux session for workspace: ${workspaceId}`);
+  }
+
+  // Clear screen before attaching
+  process.stdout.write('\x1b[2J\x1b[H');
+
+  // Use spawnSync to completely block Node while tmux has control
+  spawnSync('tmux', ['attach', '-t', name], {
+    stdio: 'inherit',
+  });
+
+  // Clear screen after detaching
+  process.stdout.write('\x1b[2J\x1b[H');
+}
+
+/**
+ * Kill a terminal tmux session.
+ *
+ * @param workspaceId - Workspace identifier
+ */
+export function killTerminalSession(workspaceId: string): void {
+  const name = terminalSessionName(workspaceId);
+
+  if (hasTerminalSession(workspaceId)) {
+    try {
+      execSync(`tmux kill-session -t "${name}"`, {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      });
+    } catch {
+      // Session may have already exited
+    }
+  }
+}
