@@ -130,48 +130,57 @@ export function WorkspaceTable({
   return (
     <Box flexDirection="column" padding={1}>
       {/* Header */}
-      <Box>
+      <Box marginBottom={1}>
         <Text bold color="cyan">Workspaces</Text>
         <Text color="gray"> ({workspaces.length})</Text>
       </Box>
 
-      {/* Table Header */}
-      <Box marginTop={1}>
-        <Box width={25}>
-          <Text bold dimColor>Name</Text>
+      {/* Table with solid border */}
+      <Box flexDirection="column" borderStyle="single" borderColor="gray">
+        {/* Table Header */}
+        <Box paddingX={1} paddingY={0}>
+          <Box width={3}>
+            <Text> </Text>
+          </Box>
+          <Box width={30}>
+            <Text bold color="cyan">Name</Text>
+          </Box>
+          <Box width={25}>
+            <Text bold color="cyan">Branch</Text>
+          </Box>
+          <Box width={28}>
+            <Text bold color="cyan">Changes</Text>
+          </Box>
+          <Box width={15}>
+            <Text bold color="cyan">Status</Text>
+          </Box>
         </Box>
-        <Box width={20}>
-          <Text bold dimColor>Branch</Text>
-        </Box>
-        <Box width={20}>
-          <Text bold dimColor>Changes</Text>
-        </Box>
-        <Box width={15}>
-          <Text bold dimColor>Status</Text>
-        </Box>
-      </Box>
 
-      {/* Table Rows */}
-      <Box flexDirection="column" marginTop={1}>
-        {workspaces.map((workspace, index) => (
-          <WorkspaceRow
-            key={workspace.id}
-            workspace={workspace}
-            isSelected={index === selectedIndex}
-            isActive={workspace.id === activeWorkspaceId}
-          />
-        ))}
+        {/* Separator */}
+        <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray" />
+
+        {/* Table Rows */}
+        <Box flexDirection="column">
+          {workspaces.map((workspace, index) => (
+            <WorkspaceRow
+              key={workspace.id}
+              workspace={workspace}
+              isSelected={index === selectedIndex}
+              isActive={workspace.id === activeWorkspaceId}
+            />
+          ))}
+        </Box>
       </Box>
 
       {/* Footer with keyboard shortcuts */}
-      <Box marginTop={1} borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} borderColor="gray" paddingTop={1}>
+      <Box marginTop={1}>
         {selectedWorkspace ? (
-          <Text color="gray" dimColor>
-            Enter: open | a: agent | t: terminal | d: diff | n: new | s: settings | q: quit
+          <Text color="white">
+            <Text color="cyan">Enter</Text>: open | <Text color="cyan">a</Text>: agent | <Text color="cyan">t</Text>: terminal | <Text color="cyan">d</Text>: diff | <Text color="cyan">n</Text>: new | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
           </Text>
         ) : (
-          <Text color="gray" dimColor>
-            n: new workspace | s: settings | q: quit
+          <Text color="white">
+            <Text color="cyan">n</Text>: new workspace | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
           </Text>
         )}
       </Box>
@@ -231,51 +240,64 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
   const agentStatus = agentState.status === 'idle' ? 'stopped' : agentState.status;
   const hasAgent = hasAgentSession(workspace.id);
 
-  // Format diff summary
-  const diffText = isLoading
-    ? 'Loading...'
-    : diffSummary
-    ? formatDiffSummary(diffSummary)
-    : 'No changes';
-
   // Status color
   const statusColor =
     agentStatus === 'running' ? 'green' :
     agentStatus === 'error' ? 'red' :
     'yellow';
 
+  // Render diff summary with color coding
+  const renderDiffSummary = () => {
+    if (isLoading) {
+      return <Text color="gray">Loading...</Text>;
+    }
+
+    if (!diffSummary || diffSummary.filesChanged === 0) {
+      return <Text color="gray">No changes</Text>;
+    }
+
+    const fileText = diffSummary.filesChanged === 1 ? 'file' : 'files';
+
+    return (
+      <Text>
+        <Text color={isSelected ? 'cyan' : 'white'}>{diffSummary.filesChanged} {fileText}, </Text>
+        <Text color="green">+{diffSummary.insertions}</Text>
+        <Text color={isSelected ? 'cyan' : 'white'}>/</Text>
+        <Text color="red">-{diffSummary.deletions}</Text>
+      </Text>
+    );
+  };
+
   return (
-    <Box>
+    <Box paddingX={1} paddingY={0}>
       {/* Selection indicator */}
-      <Box width={2}>
-        <Text color="cyan">{isSelected ? '>' : ' '}</Text>
+      <Box width={3}>
+        <Text color="cyan" bold>{isSelected ? '❯' : ' '}</Text>
       </Box>
 
       {/* Name */}
-      <Box width={25}>
+      <Box width={30}>
         <Text color={isSelected ? 'cyan' : 'white'} bold={isActive}>
           {workspace.name}
-          {isActive && <Text color="green"> *</Text>}
+          {isActive && <Text color="green"> ●</Text>}
         </Text>
       </Box>
 
       {/* Branch */}
-      <Box width={20}>
+      <Box width={25}>
         <Text color={isSelected ? 'cyan' : 'gray'}>
           {workspace.branch}
         </Text>
       </Box>
 
       {/* Changes */}
-      <Box width={20}>
-        <Text color={isSelected ? 'cyan' : 'gray'}>
-          {diffText}
-        </Text>
+      <Box width={28}>
+        {renderDiffSummary()}
       </Box>
 
       {/* Status */}
       <Box width={15}>
-        <Text color={statusColor}>
+        <Text color={statusColor} bold={agentStatus === 'running'}>
           {hasAgent ? agentStatus : '-'}
         </Text>
       </Box>
