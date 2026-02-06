@@ -19,24 +19,45 @@ export interface DiffSummary {
 }
 
 /**
- * Detect the local main branch (main or master)
- * Compares against local main branch for fast, offline diffs
+ * Detect the local main branch dynamically
+ * Finds the actual default branch name (could be main, master, develop, etc.)
  */
 async function detectBaseBranch(workspacePath: string): Promise<string> {
-  // Try local main first (most common)
+  // Try to detect from origin/HEAD (tells us the default branch)
   try {
-    await execa('git', ['rev-parse', '--verify', 'main'], { cwd: workspacePath });
-    return 'main';
+    const { stdout } = await execa('git', [
+      'symbolic-ref',
+      'refs/remotes/origin/HEAD',
+      '--short',
+    ], { cwd: workspacePath });
+
+    if (stdout) {
+      // Returns something like "origin/main" or "origin/master"
+      // Strip the "origin/" prefix to get the local branch name
+      const remoteBranch = stdout.trim();
+      const localBranch = remoteBranch.replace(/^origin\//, '');
+
+      // Verify the local branch exists
+      try {
+        await execa('git', ['rev-parse', '--verify', localBranch], { cwd: workspacePath });
+        return localBranch;
+      } catch {
+        // Local branch doesn't exist, fall through to common names
+      }
+    }
   } catch {
-    // main doesn't exist
+    // symbolic-ref failed, try common branch names
   }
 
-  // Fall back to local master
-  try {
-    await execa('git', ['rev-parse', '--verify', 'master'], { cwd: workspacePath });
-    return 'master';
-  } catch {
-    // master doesn't exist either
+  // Try common branch names as fallback
+  const commonBranches = ['main', 'master', 'develop'];
+  for (const branch of commonBranches) {
+    try {
+      await execa('git', ['rev-parse', '--verify', branch], { cwd: workspacePath });
+      return branch;
+    } catch {
+      // Branch doesn't exist, try next
+    }
   }
 
   // Absolute fallback
