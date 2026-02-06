@@ -221,7 +221,19 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
           setDiffSummary(summary);
         }
       } catch (err) {
-        // Silent fail
+        // Log error for debugging
+        console.error(`[WorkspaceTable] Failed to calculate diff for ${workspace.name}:`, err);
+        // Set empty summary on error
+        if (mounted) {
+          setDiffSummary({
+            workspaceId: workspace.id,
+            filesChanged: 0,
+            insertions: 0,
+            deletions: 0,
+            files: [],
+            timestamp: Date.now(),
+          });
+        }
       } finally {
         if (mounted) {
           setLoading(false);
