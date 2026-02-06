@@ -66,8 +66,8 @@ async function detectBaseBranch(workspacePath: string): Promise<string> {
 
 /**
  * Get diff summary with file statistics
- * Shows only changes introduced by the workspace branch since it diverged from main
- * Uses three-dot syntax to compare from merge-base to HEAD
+ * Compares against origin's main branch (e.g., origin/master)
+ * Shows changes introduced by the workspace branch
  */
 export async function getDiffSummary(
   workspaceId: string,
@@ -76,11 +76,13 @@ export async function getDiffSummary(
 ): Promise<DiffSummary> {
   try {
     // Detect base branch if not provided (local main or master)
-    const base = baseBranch || await detectBaseBranch(workspacePath);
+    const localBase = baseBranch || await detectBaseBranch(workspacePath);
+
+    // Use origin/${base} to compare against remote
+    const base = `origin/${localBase}`;
 
     // Get diff statistics using --numstat
     // Three-dot syntax: shows changes from merge-base to HEAD
-    // This excludes changes that happened in main after branching
     const { stdout: numstatOutput } = await execa('git', [
       'diff',
       '--numstat',
@@ -178,7 +180,7 @@ function parseNumstat(numstatOutput: string, nameStatusOutput: string): FileDiff
 
 /**
  * Get detailed diff content for a single file
- * Shows only changes introduced by the workspace branch since diverging from main
+ * Compares against origin's main branch
  */
 export async function getFileDiff(
   workspacePath: string,
@@ -186,7 +188,10 @@ export async function getFileDiff(
   baseBranch?: string
 ): Promise<string> {
   try {
-    const base = baseBranch || await detectBaseBranch(workspacePath);
+    const localBase = baseBranch || await detectBaseBranch(workspacePath);
+
+    // Use origin/${base} to compare against remote
+    const base = `origin/${localBase}`;
 
     const { stdout } = await execa('git', [
       'diff',
