@@ -66,7 +66,8 @@ async function detectBaseBranch(workspacePath: string): Promise<string> {
 
 /**
  * Get diff summary with file statistics
- * Compares current branch HEAD to local main (or master)
+ * Shows only changes introduced by the workspace branch since it diverged from main
+ * Uses three-dot syntax to compare from merge-base to HEAD
  */
 export async function getDiffSummary(
   workspaceId: string,
@@ -78,20 +79,19 @@ export async function getDiffSummary(
     const base = baseBranch || await detectBaseBranch(workspacePath);
 
     // Get diff statistics using --numstat
-    // Compare local main to current HEAD
+    // Three-dot syntax: shows changes from merge-base to HEAD
+    // This excludes changes that happened in main after branching
     const { stdout: numstatOutput } = await execa('git', [
       'diff',
       '--numstat',
-      base,
-      'HEAD',
+      `${base}...HEAD`,
     ], { cwd: workspacePath });
 
     // Get file status (M/A/D/R)
     const { stdout: nameStatusOutput } = await execa('git', [
       'diff',
       '--name-status',
-      base,
-      'HEAD',
+      `${base}...HEAD`,
     ], { cwd: workspacePath });
 
     // Parse the outputs
@@ -178,7 +178,7 @@ function parseNumstat(numstatOutput: string, nameStatusOutput: string): FileDiff
 
 /**
  * Get detailed diff content for a single file
- * Compares local main to current HEAD
+ * Shows only changes introduced by the workspace branch since diverging from main
  */
 export async function getFileDiff(
   workspacePath: string,
@@ -190,8 +190,7 @@ export async function getFileDiff(
 
     const { stdout } = await execa('git', [
       'diff',
-      base,
-      'HEAD',
+      `${base}...HEAD`,
       '--',
       filePath,
     ], { cwd: workspacePath });
