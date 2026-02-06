@@ -19,8 +19,8 @@ export interface DiffSummary {
 }
 
 /**
- * Detect the local main branch dynamically
- * Finds the actual default branch name (could be main, master, develop, etc.)
+ * Detect the default branch dynamically
+ * Finds the actual default branch name (could be main, master, develop, preprod, etc.)
  */
 async function detectBaseBranch(workspacePath: string): Promise<string> {
   // Try to detect from origin/HEAD (tells us the default branch)
@@ -32,32 +32,44 @@ async function detectBaseBranch(workspacePath: string): Promise<string> {
     ], { cwd: workspacePath });
 
     if (stdout) {
-      // Returns something like "origin/main" or "origin/master"
-      // Strip the "origin/" prefix to get the local branch name
+      // Returns something like "origin/main" or "origin/preprod"
+      // Strip the "origin/" prefix to get the branch name
       const remoteBranch = stdout.trim();
-      const localBranch = remoteBranch.replace(/^origin\//, '');
-
-      // Verify the local branch exists
-      try {
-        await execa('git', ['rev-parse', '--verify', localBranch], { cwd: workspacePath });
-        return localBranch;
-      } catch {
-        // Local branch doesn't exist, fall through to common names
-      }
+      const branchName = remoteBranch.replace(/^origin\//, '');
+      return branchName;
     }
   } catch {
-    // symbolic-ref failed, try common branch names
+    // symbolic-ref failed, try to find default branch another way
   }
 
-  // Try common branch names as fallback
-  const commonBranches = ['main', 'master', 'develop'];
-  for (const branch of commonBranches) {
-    try {
-      await execa('git', ['rev-parse', '--verify', branch], { cwd: workspacePath });
-      return branch;
-    } catch {
-      // Branch doesn't exist, try next
+  // Fallback: list all remote branches and pick a likely default
+  try {
+    const { stdout } = await execa('git', [
+      'branch',
+      '-r',
+      '--list',
+      'origin/*',
+    ], { cwd: workspacePath });
+
+    const remoteBranches = stdout
+      .split('\n')
+      .map(b => b.trim().replace(/^origin\//, ''))
+      .filter(b => b && b !== 'HEAD');
+
+    // Try common default branch names in order
+    const commonDefaults = ['main', 'master', 'preprod', 'develop', 'trunk'];
+    for (const name of commonDefaults) {
+      if (remoteBranches.includes(name)) {
+        return name;
+      }
     }
+
+    // If none of the common names exist, use the first remote branch
+    if (remoteBranches.length > 0) {
+      return remoteBranches[0];
+    }
+  } catch {
+    // Failed to list remote branches
   }
 
   // Absolute fallback
