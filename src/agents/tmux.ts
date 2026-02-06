@@ -175,8 +175,17 @@ export function attachSession(workspaceId: string): void {
     throw new Error(`No tmux session for workspace: ${workspaceId}`);
   }
 
+  // Save current stdin state
+  const wasRaw = process.stdin.isRaw;
+  const wasPaused = process.stdin.isPaused();
+
   // Clear screen before attaching
   process.stdout.write('\x1b[2J\x1b[H');
+
+  // Disable raw mode before tmux takes over (tmux will set its own modes)
+  if (process.stdin.isTTY && wasRaw) {
+    process.stdin.setRawMode(false);
+  }
 
   // Use spawnSync to completely block Node while tmux has control
   // This prevents Ink from interfering with the terminal
@@ -184,8 +193,33 @@ export function attachSession(workspaceId: string): void {
     stdio: 'inherit',
   });
 
-  // Clear screen after detaching to let Ink redraw cleanly
-  process.stdout.write('\x1b[2J\x1b[H');
+  // Restore stdin state for Ink after detaching
+  if (process.stdin.isTTY) {
+    // Resume stdin first if it was flowing
+    if (!wasPaused) {
+      process.stdin.resume();
+    }
+
+    // Then restore raw mode
+    if (wasRaw) {
+      process.stdin.setRawMode(true);
+    }
+
+    // Drain any pending input to prevent stale keystrokes
+    process.stdin.read();
+  }
+
+  // Give terminal a moment to settle after tmux releases it
+  try {
+    execSync('sleep 0.1', { stdio: 'ignore' });
+  } catch {}
+
+  // Aggressive terminal reset to ensure clean state for Ink
+  process.stdout.write('\x1bc');        // Full terminal reset (ESC c)
+  process.stdout.write('\x1b[!p');      // Soft terminal reset
+  process.stdout.write('\x1b[?25h');    // Show cursor
+  process.stdout.write('\x1b[?1049l');  // Exit alternate screen (if tmux left us in it)
+  process.stdout.write('\x1b[2J\x1b[H'); // Clear screen and home cursor
 }
 
 /**
@@ -288,16 +322,50 @@ export function attachTerminalSession(workspaceId: string): void {
     throw new Error(`No terminal tmux session for workspace: ${workspaceId}`);
   }
 
+  // Save current stdin state
+  const wasRaw = process.stdin.isRaw;
+  const wasPaused = process.stdin.isPaused();
+
   // Clear screen before attaching
   process.stdout.write('\x1b[2J\x1b[H');
+
+  // Disable raw mode before tmux takes over (tmux will set its own modes)
+  if (process.stdin.isTTY && wasRaw) {
+    process.stdin.setRawMode(false);
+  }
 
   // Use spawnSync to completely block Node while tmux has control
   spawnSync('tmux', ['attach', '-t', name], {
     stdio: 'inherit',
   });
 
-  // Clear screen after detaching
-  process.stdout.write('\x1b[2J\x1b[H');
+  // Restore stdin state for Ink after detaching
+  if (process.stdin.isTTY) {
+    // Resume stdin first if it was flowing
+    if (!wasPaused) {
+      process.stdin.resume();
+    }
+
+    // Then restore raw mode
+    if (wasRaw) {
+      process.stdin.setRawMode(true);
+    }
+
+    // Drain any pending input to prevent stale keystrokes
+    process.stdin.read();
+  }
+
+  // Give terminal a moment to settle after tmux releases it
+  try {
+    execSync('sleep 0.1', { stdio: 'ignore' });
+  } catch {}
+
+  // Aggressive terminal reset to ensure clean state for Ink
+  process.stdout.write('\x1bc');        // Full terminal reset (ESC c)
+  process.stdout.write('\x1b[!p');      // Soft terminal reset
+  process.stdout.write('\x1b[?25h');    // Show cursor
+  process.stdout.write('\x1b[?1049l');  // Exit alternate screen (if tmux left us in it)
+  process.stdout.write('\x1b[2J\x1b[H'); // Clear screen and home cursor
 }
 
 /**

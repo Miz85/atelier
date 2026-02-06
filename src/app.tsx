@@ -1,6 +1,6 @@
 // src/app.tsx
-import React, { useState, useEffect } from 'react';
-import { Box, Text, useApp, useInput } from 'ink';
+import { useState, useEffect } from 'react';
+import { useApp, useInput } from 'ink';
 import { Provider, useAtom, useSetAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
 import { CreateWorkspace } from './components/CreateWorkspace.js';
@@ -12,10 +12,10 @@ import { workspacesAtom, activeWorkspaceIdAtom, repoPathAtom, type Workspace } f
 import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
 import { initAgentStateAtom } from './state/agents.js';
-import { syncWorkspacesFromGit, gitWorktreeToWorkspace, deleteWorkspace } from './workspace/workspace-manager.js';
+import { gitWorktreeToWorkspace, deleteWorkspace } from './workspace/workspace-manager.js';
 import { detectGitRoot } from './workspace/git-root.js';
-import { spawnAgent, attachToAgent, getAgentByWorkspace } from './agents/spawn.js';
-import { hasSession as hasAgentSession, createSession, killSession, killTerminalSession } from './agents/tmux.js';
+import { spawnAgent, getAgentByWorkspace } from './agents/spawn.js';
+import { hasSession as hasAgentSession, killSession, killTerminalSession } from './agents/tmux.js';
 import {
   createTerminalSession,
   hasTerminalSession,
@@ -37,6 +37,7 @@ function AppContent() {
   const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
   const initAgentState = useSetAtom(initAgentStateAtom);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render after tmux detach
 
   // Auto-detect git repository on mount
   useEffect(() => {
@@ -91,6 +92,10 @@ function AppContent() {
       // Attach to session (synchronous, blocks until user detaches)
       if (hasAgentSession(workspace.id)) {
         attachSession(workspace.id);
+        // Defer state update to next tick to ensure terminal is fully restored
+        setImmediate(() => {
+          setRenderKey(k => k + 1);
+        });
       }
     } catch (err) {
       // Attachment failed - silent for now
@@ -106,6 +111,10 @@ function AppContent() {
 
       // Attach to session (blocking)
       attachTerminalSession(workspace.id);
+      // Defer state update to next tick to ensure terminal is fully restored
+      setImmediate(() => {
+        setRenderKey(k => k + 1);
+      });
     } catch (err) {
       // Attachment failed - silent for now
     }
@@ -213,6 +222,7 @@ function AppContent() {
   // Main screen - WorkspaceTable
   return (
     <WorkspaceTable
+      key={renderKey}
       onCreateWorkspace={() => setScreen('create-workspace')}
       onSettings={() => setScreen('settings')}
       onOpenDiffView={handleOpenDiffView}
