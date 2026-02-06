@@ -14,8 +14,12 @@ export class FileSystemStorage {
   constructor(storageDir?: string) {
     // Default: ~/.atelier/state (XDG-adjacent, simple for CLI tool)
     this.storageDir = storageDir ?? path.join(os.homedir(), '.atelier', 'state');
+  }
 
-    // Ensure storage directory exists
+  /**
+   * Ensures storage directory exists (lazy initialization)
+   */
+  private ensureStorageDir(): void {
     if (!fs.existsSync(this.storageDir)) {
       fs.mkdirSync(this.storageDir, { recursive: true });
     }
@@ -41,6 +45,7 @@ export class FileSystemStorage {
   }
 
   setItem<T>(key: string, value: T): void {
+    this.ensureStorageDir(); // Create directory only when writing
     const filePath = this.getFilePath(key);
     try {
       // Use write-file-atomic to prevent corruption on crash/power loss

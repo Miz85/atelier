@@ -8,7 +8,7 @@ import { WorkspaceList } from './components/WorkspaceList.js';
 import { WorkspaceTable } from './components/WorkspaceTable.js';
 import { DetailedDiffView } from './components/DetailedDiffView.js';
 import { DeleteWorkspaceConfirm } from './components/DeleteWorkspaceConfirm.js';
-import { workspacesAtom, activeWorkspaceIdAtom, activeWorkspaceAtom, repoPathAtom, type Workspace } from './state/workspace.js';
+import { workspacesAtom, activeWorkspaceIdAtom, repoPathAtom, type Workspace } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
 import { initAgentStateAtom } from './state/agents.js';
@@ -22,6 +22,8 @@ import {
   attachTerminalSession,
   attachSession
 } from './agents/tmux.js';
+import { listWorktrees } from './workspace/git-worktree.js';
+import { realpathSync } from 'node:fs';
 
 type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'diff-view' | 'delete-confirm';
 
@@ -38,47 +40,41 @@ function AppContent() {
 
   // Auto-detect git repository on mount
   useEffect(() => {
-    if (!repoPath) {
-      const detectedRoot = detectGitRoot();
-      if (detectedRoot) {
-        setRepoPath(detectedRoot);
-      }
+    const detectedRoot = detectGitRoot();
+    if (detectedRoot) {
+      setRepoPath(detectedRoot);
     }
-  }, [repoPath, setRepoPath]);
+  }, []);
+
 
   // Sync workspaces from git worktrees when repoPath is set or changes
   useEffect(() => {
-    if (!repoPath) return;
+    if (!repoPath) {
+      setWorkspaces([]);
+      return;
+    }
 
     const doSync = async () => {
       try {
-        const result = await syncWorkspacesFromGit(repoPath, workspaces);
+        const gitWorktrees = await listWorktrees(repoPath);
+        const mainRepoRealPath = realpathSync(repoPath);
+        const validWorktrees = gitWorktrees.filter(
+          gw => gw.path !== mainRepoRealPath
+        );
 
-        // Only update if there are changes
-        if (result.toAdd.length > 0 || result.toRemove.length > 0) {
-          // Convert GitWorktrees to Workspaces
-          const newWorkspaces = result.toAdd.map(gw =>
-            gitWorktreeToWorkspace(gw, settings)
-          );
+        const newWorkspaces = validWorktrees.map(gw =>
+          gitWorktreeToWorkspace(gw, settings)
+        );
 
-          // Merge: keep unchanged, add new, remove orphaned
-          const toRemoveIds = new Set(result.toRemove.map(w => w.id));
-          const merged = [
-            ...result.unchanged,
-            ...newWorkspaces,
-          ].filter(w => !toRemoveIds.has(w.id));
-
-          setWorkspaces(merged);
-        }
+        setWorkspaces(newWorkspaces);
       } catch (err) {
         console.error('[atelier] Failed to sync workspaces:', err);
+        setWorkspaces([]);
       }
     };
 
     doSync();
-    // Only re-run when repoPath changes, not on every workspaces change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repoPath]);
+  }, [repoPath, setWorkspaces, settings]);
 
   // Handler functions
   const handleAttachAgent = (workspace: Workspace) => {
