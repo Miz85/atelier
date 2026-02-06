@@ -124,6 +124,20 @@ export function WorkspaceTable({
   if (workspaces.length === 0) {
     return (
       <Box flexDirection="column" padding={1}>
+        {/* ASCII Art Header */}
+        <Box marginBottom={1}>
+          <Text color="cyan">
+          {`
+   █████╗ ████████╗███████╗██╗     ██╗███████╗██████╗
+  ██╔══██╗╚══██╔══╝██╔════╝██║     ██║██╔════╝██╔══██╗
+  ███████║   ██║   █████╗  ██║     ██║█████╗  ██████╔╝
+  ██╔══██║   ██║   ██╔══╝  ██║     ██║██╔══╝  ██╔══██╗
+  ██║  ██║   ██║   ███████╗███████╗██║███████╗██║  ██║
+  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝
+  `}
+          </Text>
+        </Box>
+
         <Text bold color="cyan">Workspaces</Text>
         <Box marginTop={1}>
           <Text color="gray">No workspaces yet.</Text>
@@ -137,6 +151,20 @@ export function WorkspaceTable({
 
   return (
     <Box flexDirection="column" padding={1}>
+      {/* ASCII Art Header */}
+      <Box marginBottom={1}>
+        <Text color="cyan">
+        {`
+   █████╗ ████████╗███████╗██╗     ██╗███████╗██████╗
+  ██╔══██╗╚══██╔══╝██╔════╝██║     ██║██╔════╝██╔══██╗
+  ███████║   ██║   █████╗  ██║     ██║█████╗  ██████╔╝
+  ██╔══██║   ██║   ██╔══╝  ██║     ██║██╔══╝  ██╔══██╗
+  ██║  ██║   ██║   ███████╗███████╗██║███████╗██║  ██║
+  ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝
+  `}
+        </Text>
+      </Box>
+
       {/* Header */}
       <Box marginBottom={1}>
         <Text bold color="cyan">Workspaces</Text>

@@ -13,6 +13,7 @@ import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
 import { initAgentStateAtom } from './state/agents.js';
 import { syncWorkspacesFromGit, gitWorktreeToWorkspace, deleteWorkspace } from './workspace/workspace-manager.js';
+import { detectGitRoot } from './workspace/git-root.js';
 import { spawnAgent, attachToAgent, getAgentByWorkspace } from './agents/spawn.js';
 import { hasSession as hasAgentSession, createSession, killSession, killTerminalSession } from './agents/tmux.js';
 import {
@@ -30,10 +31,20 @@ function AppContent() {
   const [workspaces, setWorkspaces] = useAtom(workspacesAtom);
   const [settings] = useAtom(settingsAtom);
   const [activeWorkspace, setActiveWorkspaceId] = useAtom(activeWorkspaceIdAtom);
-  const [repoPath] = useAtom(repoPathAtom);
+  const [repoPath, setRepoPath] = useAtom(repoPathAtom);
   const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
   const initAgentState = useSetAtom(initAgentStateAtom);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+
+  // Auto-detect git repository on mount
+  useEffect(() => {
+    if (!repoPath) {
+      const detectedRoot = detectGitRoot();
+      if (detectedRoot) {
+        setRepoPath(detectedRoot);
+      }
+    }
+  }, [repoPath, setRepoPath]);
 
   // Sync workspaces from git worktrees when repoPath is set or changes
   useEffect(() => {
@@ -58,17 +69,9 @@ function AppContent() {
           ].filter(w => !toRemoveIds.has(w.id));
 
           setWorkspaces(merged);
-
-          // Log for debugging (remove later or make conditional)
-          if (result.toAdd.length > 0) {
-            console.log(`[equipe] Synced ${result.toAdd.length} external worktree(s)`);
-          }
-          if (result.toRemove.length > 0) {
-            console.log(`[equipe] Removed ${result.toRemove.length} orphaned workspace(s)`);
-          }
         }
       } catch (err) {
-        console.error('[equipe] Failed to sync workspaces:', err);
+        console.error('[atelier] Failed to sync workspaces:', err);
       }
     };
 
@@ -154,10 +157,8 @@ function AppContent() {
       if (activeWorkspace === workspaceToDelete.id) {
         setActiveWorkspaceId(null);
       }
-
-      console.log(`[equipe] Deleted workspace: ${workspaceToDelete.name}`);
     } catch (err) {
-      console.error('[equipe] Failed to delete workspace:', err);
+      console.error('[atelier] Failed to delete workspace:', err);
     } finally {
       setWorkspaceToDelete(null);
       setScreen('main');

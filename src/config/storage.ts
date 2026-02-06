@@ -12,8 +12,8 @@ export class FileSystemStorage {
   private storageDir: string;
 
   constructor(storageDir?: string) {
-    // Default: ~/.equipe/state (XDG-adjacent, simple for CLI tool)
-    this.storageDir = storageDir ?? path.join(os.homedir(), '.equipe', 'state');
+    // Default: ~/.atelier/state (XDG-adjacent, simple for CLI tool)
+    this.storageDir = storageDir ?? path.join(os.homedir(), '.atelier', 'state');
 
     // Ensure storage directory exists
     if (!fs.existsSync(this.storageDir)) {

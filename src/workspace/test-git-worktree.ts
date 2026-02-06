@@ -7,7 +7,7 @@ import { $ } from 'execa';
 
 async function test() {
   // Create temp directory for test repo
-  const testDir = mkdtempSync(join(tmpdir(), 'equipe-test-'));
+  const testDir = mkdtempSync(join(tmpdir(), 'atelier-test-'));
   const repoPath = join(testDir, 'repo');
 
   try {

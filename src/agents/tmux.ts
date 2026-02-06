@@ -23,10 +23,10 @@ export function checkTmuxAvailable(): void {
 
 /**
  * Generate a tmux session name from workspace ID.
- * Prefixed with "equipe-" to avoid conflicts.
+ * Prefixed with "atelier-" to avoid conflicts.
  */
 export function sessionName(workspaceId: string): string {
-  return `equipe-${workspaceId}`;
+  return `atelier-${workspaceId}`;
 }
 
 /**
@@ -232,7 +232,7 @@ export function resizeSession(workspaceId: string): void {
  * Terminal sessions are separate from agent sessions.
  */
 export function terminalSessionName(workspaceId: string): string {
-  return `equipe-terminal-${workspaceId}`;
+  return `atelier-terminal-${workspaceId}`;
 }
 
 /**

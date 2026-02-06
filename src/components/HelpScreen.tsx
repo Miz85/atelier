@@ -49,7 +49,7 @@ export function HelpScreen({ onClose }: HelpScreenProps) {
 
       <Box marginTop={1} flexDirection="column">
         <Text bold>Fullscreen Mode:</Text>
-        <Text>  Ctrl+B D      Detach (return to equipe)</Text>
+        <Text>  Ctrl+B D      Detach (return to atelier)</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">

@@ -20,12 +20,9 @@ export function setupGracefulShutdown(
 
   const shutdown = async (reason: string, exitCode: number = 0) => {
     if (shutdownInProgress) {
-      console.log(`[Lifecycle] Shutdown already in progress (${reason})`);
       return;
     }
     shutdownInProgress = true;
-
-    console.log(`\n[Lifecycle] Shutdown initiated: ${reason}`);
 
     // Set timeout to force exit if cleanup hangs
     const forceExitTimeout = setTimeout(() => {
@@ -36,7 +33,6 @@ export function setupGracefulShutdown(
     try {
       // Run additional cleanup first (e.g., save state, close connections)
       if (additionalCleanup) {
-        console.log('[Lifecycle] Running additional cleanup...');
         await additionalCleanup();
       }
 
@@ -53,7 +49,6 @@ export function setupGracefulShutdown(
       }
 
       clearTimeout(forceExitTimeout);
-      console.log('[Lifecycle] Shutdown complete');
       process.exit(exitCode);
     } catch (error) {
       clearTimeout(forceExitTimeout);
@@ -93,8 +88,6 @@ export function setupGracefulShutdown(
   // Note: process.on('exit') only allows sync code
   // Heavy cleanup done in signal handlers above
   process.on('exit', (code) => {
-    console.log(`[Lifecycle] Process exiting with code ${code}`);
+    // Exit silently
   });
-
-  console.log('[Lifecycle] Graceful shutdown handlers registered');
 }

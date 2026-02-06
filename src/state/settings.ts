@@ -19,7 +19,7 @@ export const settingsDefaults: Settings = {
 
 /**
  * Persistent settings atom.
- * Persists to ~/.equipe/state/settings.json
+ * Persists to ~/.atelier/state/settings.json
  */
 export const settingsAtom = atomWithStorage<Settings>(
   'settings',

@@ -20,7 +20,7 @@ export interface Workspace {
 
 /**
  * Persistent atom for all workspaces.
- * Persists to ~/.equipe/state/workspaces.json
+ * Persists to ~/.atelier/state/workspaces.json
  */
 export const workspacesAtom = atomWithStorage<Workspace[]>(
   'workspaces',
@@ -32,7 +32,7 @@ export const workspacesAtom = atomWithStorage<Workspace[]>(
 /**
  * Persisted atom for the currently active workspace ID.
  * null means no workspace is active.
- * Persists to ~/.equipe/state/activeWorkspaceId.json
+ * Persists to ~/.atelier/state/activeWorkspaceId.json
  */
 export const activeWorkspaceIdAtom = atomWithStorage<string | null>(
   'activeWorkspaceId',

@@ -16,7 +16,6 @@ export class ProcessRegistry {
    */
   register(pid: number, description: string = 'unknown'): void {
     this.processes.set(pid, description);
-    console.log(`[ProcessRegistry] Registered PID ${pid} (${description})`);
   }
 
   /**
@@ -25,7 +24,6 @@ export class ProcessRegistry {
   unregister(pid: number): void {
     const desc = this.processes.get(pid);
     if (this.processes.delete(pid)) {
-      console.log(`[ProcessRegistry] Unregistered PID ${pid} (${desc})`);
     }
   }
 
@@ -49,21 +47,17 @@ export class ProcessRegistry {
    */
   cleanup(): void {
     if (this.cleanupInProgress) {
-      console.log('[ProcessRegistry] Cleanup already in progress, skipping');
       return;
     }
     this.cleanupInProgress = true;
 
     if (this.processes.size === 0) {
-      console.log('[ProcessRegistry] No processes to clean up');
       return;
     }
 
-    console.log(`[ProcessRegistry] Cleaning up ${this.processes.size} process(es)...`);
 
     // Kill all registered processes and their children
     for (const [pid, description] of this.processes) {
-      console.log(`[ProcessRegistry] Terminating PID ${pid} (${description})...`);
 
       try {
         // Use terminate package to kill entire process tree
@@ -73,13 +67,10 @@ export class ProcessRegistry {
             // Fallback to SIGKILL if SIGTERM fails
             try {
               process.kill(pid, 'SIGKILL');
-              console.log(`[ProcessRegistry] SIGKILL sent to ${pid}`);
             } catch (killErr) {
               // Process may already be dead, ignore
-              console.log(`[ProcessRegistry] Process ${pid} already dead`);
             }
           } else {
-            console.log(`[ProcessRegistry] Terminated PID ${pid}`);
           }
         });
       } catch (err) {
@@ -88,7 +79,6 @@ export class ProcessRegistry {
     }
 
     this.processes.clear();
-    console.log('[ProcessRegistry] Cleanup complete');
   }
 }
 
