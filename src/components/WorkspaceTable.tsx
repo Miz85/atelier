@@ -139,16 +139,16 @@ export function WorkspaceTable({
       <Box flexDirection="column" borderStyle="single" borderColor="gray">
         {/* Table Header */}
         <Box paddingX={1} paddingY={0}>
-          <Box width={3}>
+          <Box width={3} marginRight={1}>
             <Text> </Text>
           </Box>
-          <Box width={30}>
+          <Box width={28} marginRight={2}>
             <Text bold color="cyan">Name</Text>
           </Box>
-          <Box width={25}>
+          <Box width={30} marginRight={2}>
             <Text bold color="cyan">Branch</Text>
           </Box>
-          <Box width={28}>
+          <Box width={28} marginRight={2}>
             <Text bold color="cyan">Changes</Text>
           </Box>
           <Box width={15}>
@@ -271,27 +271,27 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
   return (
     <Box paddingX={1} paddingY={0}>
       {/* Selection indicator */}
-      <Box width={3}>
+      <Box width={3} marginRight={1}>
         <Text color="cyan" bold>{isSelected ? '❯' : ' '}</Text>
       </Box>
 
       {/* Name */}
-      <Box width={30}>
-        <Text color={isSelected ? 'cyan' : 'white'} bold={isActive}>
+      <Box width={28} marginRight={2}>
+        <Text color={isSelected ? 'cyan' : 'white'} bold={isActive} wrap="truncate-end">
           {workspace.name}
           {isActive && <Text color="green"> ●</Text>}
         </Text>
       </Box>
 
       {/* Branch */}
-      <Box width={25}>
-        <Text color={isSelected ? 'cyan' : 'gray'}>
+      <Box width={30} marginRight={2}>
+        <Text color={isSelected ? 'cyan' : 'gray'} wrap="truncate-end">
           {workspace.branch}
         </Text>
       </Box>
 
       {/* Changes */}
-      <Box width={28}>
+      <Box width={28} marginRight={2}>
         {renderDiffSummary()}
       </Box>
 
