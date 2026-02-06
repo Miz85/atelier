@@ -19,55 +19,33 @@ export interface DiffSummary {
 }
 
 /**
- * Detect the main branch from origin (main or master)
- * Always compares against origin's main branch, not local
+ * Detect the local main branch (main or master)
+ * Compares against local main branch for fast, offline diffs
  */
 async function detectBaseBranch(workspacePath: string): Promise<string> {
-  // Fetch origin to ensure we have latest refs
+  // Try local main first (most common)
   try {
-    await execa('git', ['fetch', 'origin', '--quiet'], { cwd: workspacePath });
+    await execa('git', ['rev-parse', '--verify', 'main'], { cwd: workspacePath });
+    return 'main';
   } catch {
-    // Fetch failed, continue with existing refs
+    // main doesn't exist
   }
 
-  // Try origin/main first (most common)
+  // Fall back to local master
   try {
-    await execa('git', ['rev-parse', '--verify', 'origin/main'], { cwd: workspacePath });
-    return 'origin/main';
+    await execa('git', ['rev-parse', '--verify', 'master'], { cwd: workspacePath });
+    return 'master';
   } catch {
-    // origin/main doesn't exist
-  }
-
-  // Fall back to origin/master
-  try {
-    await execa('git', ['rev-parse', '--verify', 'origin/master'], { cwd: workspacePath });
-    return 'origin/master';
-  } catch {
-    // origin/master doesn't exist either
-  }
-
-  // Last resort: try to detect from symbolic-ref
-  try {
-    const { stdout: defaultBranch } = await execa('git', [
-      'symbolic-ref',
-      'refs/remotes/origin/HEAD',
-      '--short',
-    ], { cwd: workspacePath });
-
-    if (defaultBranch) {
-      return defaultBranch.trim();
-    }
-  } catch {
-    // symbolic-ref failed
+    // master doesn't exist either
   }
 
   // Absolute fallback
-  return 'origin/main';
+  return 'main';
 }
 
 /**
  * Get diff summary with file statistics
- * Compares current branch HEAD to origin/main (or origin/master)
+ * Compares current branch HEAD to local main (or master)
  */
 export async function getDiffSummary(
   workspaceId: string,
@@ -75,11 +53,11 @@ export async function getDiffSummary(
   baseBranch?: string
 ): Promise<DiffSummary> {
   try {
-    // Detect base branch if not provided (origin/main or origin/master)
+    // Detect base branch if not provided (local main or master)
     const base = baseBranch || await detectBaseBranch(workspacePath);
 
     // Get diff statistics using --numstat
-    // Compare origin/main to current HEAD
+    // Compare local main to current HEAD
     const { stdout: numstatOutput } = await execa('git', [
       'diff',
       '--numstat',
@@ -179,7 +157,7 @@ function parseNumstat(numstatOutput: string, nameStatusOutput: string): FileDiff
 
 /**
  * Get detailed diff content for a single file
- * Compares origin/main to current HEAD
+ * Compares local main to current HEAD
  */
 export async function getFileDiff(
   workspacePath: string,
