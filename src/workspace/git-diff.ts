@@ -16,6 +16,7 @@ export interface DiffSummary {
   deletions: number;
   files: FileDiff[];
   timestamp: number;
+  hasUncommittedChanges?: boolean; // True if there are uncommitted changes
 }
 
 /**
@@ -115,6 +116,22 @@ export async function getDiffSummary(
     const insertions = files.reduce((sum, f) => sum + f.insertions, 0);
     const deletions = files.reduce((sum, f) => sum + f.deletions, 0);
 
+    // Check for uncommitted changes if no committed changes
+    let hasUncommittedChanges = false;
+    if (files.length === 0) {
+      try {
+        const { stdout: uncommittedOutput } = await execa('git', [
+          'diff',
+          '--numstat',
+          'HEAD',
+        ], { cwd: workspacePath });
+
+        hasUncommittedChanges = uncommittedOutput.trim().length > 0;
+      } catch {
+        // Failed to check uncommitted changes, ignore
+      }
+    }
+
     return {
       workspaceId,
       filesChanged: files.length,
@@ -122,6 +139,7 @@ export async function getDiffSummary(
       deletions,
       files,
       timestamp: Date.now(),
+      hasUncommittedChanges,
     };
   } catch (error) {
     // Return empty diff on error (no changes, detached HEAD, etc.)

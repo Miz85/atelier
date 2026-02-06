@@ -265,6 +265,10 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
     }
 
     if (!diffSummary || diffSummary.filesChanged === 0) {
+      // Check if there are uncommitted changes
+      if (diffSummary?.hasUncommittedChanges) {
+        return <Text color="yellow">Uncommitted changes</Text>;
+      }
       return <Text color="gray">No changes</Text>;
     }
 
