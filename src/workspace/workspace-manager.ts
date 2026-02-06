@@ -67,20 +67,28 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   return workspace;
 }
 
+export interface DeleteWorkspaceOptions {
+  deleteFolder: boolean;  // Whether to delete the git worktree folder
+  deleteBranch: boolean;  // Whether to delete the git branch
+}
+
 /**
- * Delete a workspace and its git worktree.
+ * Delete a workspace and optionally its git worktree and/or branch.
  *
  * Steps:
  * 1. Kill agent process if running (via PID in workspace)
- * 2. Remove git worktree
- * 3. Caller removes from state
+ * 2. Optionally remove git worktree folder
+ * 3. Optionally delete git branch
+ * 4. Caller removes from state
  *
  * @param workspace - The workspace to delete
  * @param repoPath - Path to the main repository
+ * @param options - What to delete (folder and/or branch)
  */
 export async function deleteWorkspace(
   workspace: Workspace,
-  repoPath: string
+  repoPath: string,
+  options: DeleteWorkspaceOptions
 ): Promise<void> {
   // Kill agent process if running
   if (workspace.pid !== undefined) {
@@ -102,12 +110,16 @@ export async function deleteWorkspace(
     }
   }
 
-  // Remove git worktree
-  await removeWorktree(repoPath, workspace.path);
+  // Remove git worktree if requested
+  if (options.deleteFolder) {
+    await removeWorktree(repoPath, workspace.path);
+  }
 
-  // Delete the branch to allow re-creation with same name
-  // Use force delete since the branch was just checked out in the worktree
-  await deleteBranch(repoPath, workspace.branch, true);
+  // Delete the branch if requested
+  // Use force delete since the branch may have been checked out in the worktree
+  if (options.deleteBranch) {
+    await deleteBranch(repoPath, workspace.branch, true);
+  }
 }
 
 /**

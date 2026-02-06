@@ -77,7 +77,11 @@ export function WorkspaceList({ onBack, onSelect }: WorkspaceListProps) {
     setConfirmDelete(false);
 
     try {
-      await deleteWorkspace(workspace, repoPath);
+      // Delete both folder and branch (same as previous behavior)
+      await deleteWorkspace(workspace, repoPath, {
+        deleteFolder: true,
+        deleteBranch: true,
+      });
 
       // Remove from state
       const newWorkspaces = workspaces.filter(w => w.id !== workspace.id);

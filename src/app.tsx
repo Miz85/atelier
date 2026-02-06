@@ -7,13 +7,14 @@ import { CreateWorkspace } from './components/CreateWorkspace.js';
 import { WorkspaceList } from './components/WorkspaceList.js';
 import { WorkspaceTable } from './components/WorkspaceTable.js';
 import { DetailedDiffView } from './components/DetailedDiffView.js';
+import { DeleteWorkspaceConfirm } from './components/DeleteWorkspaceConfirm.js';
 import { workspacesAtom, activeWorkspaceIdAtom, activeWorkspaceAtom, repoPathAtom, type Workspace } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
 import { initAgentStateAtom } from './state/agents.js';
-import { syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace/workspace-manager.js';
+import { syncWorkspacesFromGit, gitWorktreeToWorkspace, deleteWorkspace } from './workspace/workspace-manager.js';
 import { spawnAgent, attachToAgent, getAgentByWorkspace } from './agents/spawn.js';
-import { hasSession as hasAgentSession, createSession } from './agents/tmux.js';
+import { hasSession as hasAgentSession, createSession, killSession, killTerminalSession } from './agents/tmux.js';
 import {
   createTerminalSession,
   hasTerminalSession,
@@ -21,7 +22,7 @@ import {
   attachSession
 } from './agents/tmux.js';
 
-type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'diff-view';
+type Screen = 'main' | 'settings' | 'create-workspace' | 'workspace-list' | 'diff-view' | 'delete-confirm';
 
 function AppContent() {
   const { exit } = useApp();
@@ -32,6 +33,7 @@ function AppContent() {
   const [repoPath] = useAtom(repoPathAtom);
   const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
   const initAgentState = useSetAtom(initAgentStateAtom);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
 
   // Sync workspaces from git worktrees when repoPath is set or changes
   useEffect(() => {
@@ -125,6 +127,48 @@ function AppContent() {
     handleAttachAgent(workspace);
   };
 
+  const handleDeleteWorkspace = (workspace: Workspace) => {
+    setWorkspaceToDelete(workspace);
+    setScreen('delete-confirm');
+  };
+
+  const handleConfirmDelete = async (options: { deleteFolder: boolean; deleteBranch: boolean }) => {
+    if (!repoPath || !workspaceToDelete) return;
+
+    try {
+      // Kill tmux sessions if they exist
+      if (hasAgentSession(workspaceToDelete.id)) {
+        killSession(workspaceToDelete.id);
+      }
+      if (hasTerminalSession(workspaceToDelete.id)) {
+        killTerminalSession(workspaceToDelete.id);
+      }
+
+      // Delete the workspace with specified options
+      await deleteWorkspace(workspaceToDelete, repoPath, options);
+
+      // Remove from state
+      setWorkspaces(workspaces.filter(w => w.id !== workspaceToDelete.id));
+
+      // Clear active workspace if it was deleted
+      if (activeWorkspace === workspaceToDelete.id) {
+        setActiveWorkspaceId(null);
+      }
+
+      console.log(`[equipe] Deleted workspace: ${workspaceToDelete.name}`);
+    } catch (err) {
+      console.error('[equipe] Failed to delete workspace:', err);
+    } finally {
+      setWorkspaceToDelete(null);
+      setScreen('main');
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setWorkspaceToDelete(null);
+    setScreen('main');
+  };
+
   // Global quit shortcut
   useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c')) {
@@ -159,6 +203,16 @@ function AppContent() {
     );
   }
 
+  if (screen === 'delete-confirm' && workspaceToDelete) {
+    return (
+      <DeleteWorkspaceConfirm
+        workspace={workspaceToDelete}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
+    );
+  }
+
   // Main screen - WorkspaceTable
   return (
     <WorkspaceTable
@@ -168,6 +222,7 @@ function AppContent() {
       onAttachAgent={handleAttachAgent}
       onAttachTerminal={handleAttachTerminal}
       onOpenWorkspaceView={handleOpenWorkspaceView}
+      onDeleteWorkspace={handleDeleteWorkspace}
     />
   );
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // src/index.ts
 import React from 'react';
 import { render } from 'ink';

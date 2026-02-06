@@ -77,7 +77,10 @@ async function test() {
 
     // Test 3: deleteWorkspace
     console.log('\nTest 3: deleteWorkspace');
-    await deleteWorkspace(workspace, repoPath);
+    await deleteWorkspace(workspace, repoPath, {
+      deleteFolder: true,
+      deleteBranch: true,
+    });
 
     const worktreesAfter = await listWorktrees(repoPath);
     if (worktreesAfter.length !== 1) throw new Error('Expected 1 worktree after delete');

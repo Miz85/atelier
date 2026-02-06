@@ -16,6 +16,7 @@ interface WorkspaceTableProps {
   onAttachAgent: (workspace: Workspace) => void;
   onAttachTerminal: (workspace: Workspace) => void;
   onOpenWorkspaceView: (workspace: Workspace) => void;
+  onDeleteWorkspace: (workspace: Workspace) => void;
 }
 
 export function WorkspaceTable({
@@ -25,6 +26,7 @@ export function WorkspaceTable({
   onAttachAgent,
   onAttachTerminal,
   onOpenWorkspaceView,
+  onDeleteWorkspace,
 }: WorkspaceTableProps) {
   const [workspaces] = useAtom(workspacesAtom);
   const [activeWorkspaceId, setActiveWorkspaceId] = useAtom(activeWorkspaceIdAtom);
@@ -111,6 +113,12 @@ export function WorkspaceTable({
       onSettings();
       return;
     }
+
+    if (input === 'x') {
+      // Delete workspace
+      onDeleteWorkspace(selectedWorkspace);
+      return;
+    }
   });
 
   if (workspaces.length === 0) {
@@ -142,10 +150,13 @@ export function WorkspaceTable({
           <Box width={3} marginRight={1}>
             <Text> </Text>
           </Box>
-          <Box width={28} marginRight={2}>
+          <Box width={25} marginRight={2}>
             <Text bold color="cyan">Name</Text>
           </Box>
-          <Box width={30} marginRight={2}>
+          <Box width={12} marginRight={2}>
+            <Text bold color="cyan">Agent</Text>
+          </Box>
+          <Box width={28} marginRight={2}>
             <Text bold color="cyan">Branch</Text>
           </Box>
           <Box width={28} marginRight={2}>
@@ -176,7 +187,7 @@ export function WorkspaceTable({
       <Box marginTop={1}>
         {selectedWorkspace ? (
           <Text color="white">
-            <Text color="cyan">Enter</Text>: open | <Text color="cyan">a</Text>: agent | <Text color="cyan">t</Text>: terminal | <Text color="cyan">d</Text>: diff | <Text color="cyan">n</Text>: new | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
+            <Text color="cyan">Enter</Text>: open | <Text color="cyan">a</Text>: agent | <Text color="cyan">t</Text>: terminal | <Text color="cyan">d</Text>: diff | <Text color="cyan">x</Text>: delete | <Text color="cyan">n</Text>: new | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
           </Text>
         ) : (
           <Text color="white">
@@ -267,7 +278,25 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
     if (!diffSummary || diffSummary.filesChanged === 0) {
       // Check if there are uncommitted changes
       if (diffSummary?.hasUncommittedChanges) {
-        return <Text color="yellow">Uncommitted changes</Text>;
+        const uncommittedFileCount = diffSummary.uncommittedFiles || 0;
+        const fileText = uncommittedFileCount === 1 ? 'file' : 'files';
+
+        return (
+          <Text>
+            <Text color="yellow">{uncommittedFileCount} {fileText}</Text>
+            {(diffSummary.uncommittedInsertions || diffSummary.uncommittedDeletions) ? (
+              <>
+                <Text color="yellow">, </Text>
+                <Text color="green">+{diffSummary.uncommittedInsertions || 0}</Text>
+                <Text color="yellow">/</Text>
+                <Text color="red">-{diffSummary.uncommittedDeletions || 0}</Text>
+                <Text color="yellow"> (uncommitted)</Text>
+              </>
+            ) : (
+              <Text color="yellow"> (uncommitted)</Text>
+            )}
+          </Text>
+        );
       }
       return <Text color="gray">No changes</Text>;
     }
@@ -292,15 +321,22 @@ function WorkspaceRow({ workspace, isSelected, isActive }: WorkspaceRowProps) {
       </Box>
 
       {/* Name */}
-      <Box width={28} marginRight={2}>
+      <Box width={25} marginRight={2}>
         <Text color={isSelected ? 'cyan' : 'white'} bold={isActive} wrap="truncate-end">
           {workspace.name}
           {isActive && <Text color="green"> ●</Text>}
         </Text>
       </Box>
 
+      {/* Agent */}
+      <Box width={12} marginRight={2}>
+        <Text color={isSelected ? 'cyan' : 'gray'} wrap="truncate-end">
+          {workspace.agent}
+        </Text>
+      </Box>
+
       {/* Branch */}
-      <Box width={30} marginRight={2}>
+      <Box width={28} marginRight={2}>
         <Text color={isSelected ? 'cyan' : 'gray'} wrap="truncate-end">
           {workspace.branch}
         </Text>

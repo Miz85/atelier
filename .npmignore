@@ -1,0 +1,27 @@
+# Source files (we ship dist/)
+src/
+tsconfig.json
+*.ts
+!*.d.ts
+
+# Development
+.planning/
+bin/
+bundle/
+bin-entry.cjs
+node_modules/
+.DS_Store
+*.tsbuildinfo
+
+# Git
+.git/
+.gitignore
+
+# Testing
+test/
+*.test.js
+*.test.ts
+
+# Editor
+.vscode/
+.idea/

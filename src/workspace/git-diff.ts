@@ -17,6 +17,9 @@ export interface DiffSummary {
   files: FileDiff[];
   timestamp: number;
   hasUncommittedChanges?: boolean; // True if there are uncommitted changes
+  uncommittedFiles?: number; // Number of uncommitted files
+  uncommittedInsertions?: number; // Uncommitted insertions
+  uncommittedDeletions?: number; // Uncommitted deletions
 }
 
 /**
@@ -118,15 +121,51 @@ export async function getDiffSummary(
 
     // Check for uncommitted changes if no committed changes
     let hasUncommittedChanges = false;
+    let uncommittedFiles = 0;
+    let uncommittedInsertions = 0;
+    let uncommittedDeletions = 0;
+
     if (files.length === 0) {
       try {
-        const { stdout: uncommittedOutput } = await execa('git', [
+        // Get staged and unstaged changes
+        const { stdout: uncommittedNumstat } = await execa('git', [
           'diff',
           '--numstat',
           'HEAD',
         ], { cwd: workspacePath });
 
-        hasUncommittedChanges = uncommittedOutput.trim().length > 0;
+        if (uncommittedNumstat.trim()) {
+          hasUncommittedChanges = true;
+
+          // Parse numstat output for uncommitted changes
+          const uncommittedLines = uncommittedNumstat.trim().split('\n');
+          uncommittedFiles = uncommittedLines.length;
+
+          for (const line of uncommittedLines) {
+            const parts = line.split('\t');
+            if (parts.length >= 3) {
+              const insertionsCount = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
+              const deletionsCount = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+              uncommittedInsertions += insertionsCount;
+              uncommittedDeletions += deletionsCount;
+            }
+          }
+        }
+
+        // Also check for untracked files
+        const { stdout: untrackedOutput } = await execa('git', [
+          'ls-files',
+          '--others',
+          '--exclude-standard',
+        ], { cwd: workspacePath });
+
+        if (untrackedOutput.trim()) {
+          const untrackedLines = untrackedOutput.trim().split('\n');
+          uncommittedFiles += untrackedLines.length;
+          hasUncommittedChanges = true;
+          // Untracked files are all additions, but we can't count lines without reading them
+          // So we just increment the file count
+        }
       } catch {
         // Failed to check uncommitted changes, ignore
       }
@@ -140,6 +179,9 @@ export async function getDiffSummary(
       files,
       timestamp: Date.now(),
       hasUncommittedChanges,
+      uncommittedFiles,
+      uncommittedInsertions,
+      uncommittedDeletions,
     };
   } catch (error) {
     // Return empty diff on error (no changes, detached HEAD, etc.)
