@@ -1,5 +1,6 @@
 import { createWorkspace, deleteWorkspace, syncWorkspacesFromGit, gitWorktreeToWorkspace } from './workspace-manager.js';
 import { listWorktrees, type GitWorktree } from './git-worktree.js';
+import { getWorkspaceMetadata, removeWorkspaceMetadata } from '../config/storage.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -108,6 +109,49 @@ async function test() {
     if (converted.path !== '/test/path') throw new Error('Wrong path');
     if (!converted.id) throw new Error('Missing ID');
     console.log('✓ gitWorktreeToWorkspace works');
+
+    // Test 5: Agent type persistence (opencode selection survives sync)
+    console.log('\nTest 5: Agent type persistence');
+    
+    // Create workspace with opencode agent
+    const opencodeWorkspace = await createWorkspace({
+      repoPath,
+      branchName: 'feature/opencode-test',
+      name: 'OpenCode Workspace',
+      agent: 'opencode',
+      baseBranch: 'main',
+    });
+    
+    console.log('Created opencode workspace:', opencodeWorkspace.agent);
+    if (opencodeWorkspace.agent !== 'opencode') throw new Error('Agent should be opencode');
+    
+    // Verify metadata was persisted
+    const metadata = getWorkspaceMetadata();
+    if (!metadata[opencodeWorkspace.path]) throw new Error('Metadata not saved');
+    if (metadata[opencodeWorkspace.path].agent !== 'opencode') throw new Error('Metadata agent should be opencode');
+    console.log('✓ Metadata persisted correctly');
+    
+    // Simulate app restart: convert git worktree back to workspace (with default=claude)
+    const worktreesForSync = await listWorktrees(repoPath);
+    const opencodeWorktree = worktreesForSync.find(w => w.path === opencodeWorkspace.path);
+    if (!opencodeWorktree) throw new Error('Worktree not found');
+    
+    const settingsWithClaudeDefault = { defaultAgent: 'claude' as const, ideCommand: 'code' };
+    const restoredWorkspace = gitWorktreeToWorkspace(opencodeWorktree, settingsWithClaudeDefault);
+    
+    console.log('Restored workspace agent:', restoredWorkspace.agent);
+    if (restoredWorkspace.agent !== 'opencode') {
+      throw new Error(`Agent should be opencode (from metadata), got: ${restoredWorkspace.agent}`);
+    }
+    console.log('✓ Agent type preserved after sync (opencode not overwritten by default)');
+    
+    // Cleanup: delete workspace and verify metadata is removed
+    await deleteWorkspace(opencodeWorkspace, repoPath, { deleteFolder: true, deleteBranch: true });
+    const metadataAfterDelete = getWorkspaceMetadata();
+    if (metadataAfterDelete[opencodeWorkspace.path]) {
+      throw new Error('Metadata should be removed after workspace deletion');
+    }
+    console.log('✓ Metadata cleaned up on delete');
 
     console.log('\n✓ All workspace-manager tests passed!');
   } finally {
