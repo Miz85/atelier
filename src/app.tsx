@@ -1,7 +1,7 @@
 // src/app.tsx
 import { useState, useEffect } from 'react';
 import { useApp, useInput } from 'ink';
-import { Provider, useAtom, useSetAtom } from 'jotai';
+import { Provider, useAtom } from 'jotai';
 import { Settings } from './components/Settings.js';
 import { CreateWorkspace } from './components/CreateWorkspace.js';
 import { WorkspaceList } from './components/WorkspaceList.js';
@@ -11,16 +11,17 @@ import { DeleteWorkspaceConfirm } from './components/DeleteWorkspaceConfirm.js';
 import { workspacesAtom, activeWorkspaceIdAtom, repoPathAtom, type Workspace } from './state/workspace.js';
 import { settingsAtom } from './state/settings.js';
 import { diffViewStateAtom } from './state/diff.js';
-import { initAgentStateAtom } from './state/agents.js';
 import { gitWorktreeToWorkspace, deleteWorkspace } from './workspace/workspace-manager.js';
 import { detectGitRoot } from './workspace/git-root.js';
-import { spawnAgent, getAgentByWorkspace } from './agents/spawn.js';
-import { hasSession as hasAgentSession, killSession, killTerminalSession } from './agents/tmux.js';
 import {
-  createTerminalSession,
+  hasSession as hasAgentSession,
+  killSession,
   hasTerminalSession,
-  attachTerminalSession,
-  attachSession
+  killTerminalSession,
+  hasCombinedSession,
+  createCombinedSession,
+  attachCombinedSession,
+  killCombinedSession
 } from './agents/tmux.js';
 import { listWorktrees } from './workspace/git-worktree.js';
 import { realpathSync } from 'node:fs';
@@ -35,7 +36,6 @@ function AppContent() {
   const [activeWorkspace, setActiveWorkspaceId] = useAtom(activeWorkspaceIdAtom);
   const [repoPath, setRepoPath] = useAtom(repoPathAtom);
   const [diffViewState, setDiffViewState] = useAtom(diffViewStateAtom);
-  const initAgentState = useSetAtom(initAgentStateAtom);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [renderKey, setRenderKey] = useState(0); // Force re-render after tmux detach
 
@@ -78,54 +78,6 @@ function AppContent() {
   }, [repoPath, setWorkspaces, settings]);
 
   // Handler functions
-  const handleAttachAgent = (workspace: Workspace) => {
-    try {
-      // Set as active workspace so cursor returns here after detach
-      setActiveWorkspaceId(workspace.id);
-
-      // Check if agent is already running (use workspace ID to look up)
-      const agentInstance = getAgentByWorkspace(workspace.id);
-
-      if (!agentInstance || !hasAgentSession(workspace.id)) {
-        // Start agent if not running
-        const instance = spawnAgent(workspace.id, workspace.path, workspace.agent);
-        initAgentState({ workspaceId: workspace.id, agentId: instance.id });
-      }
-
-      // Attach to session (synchronous, blocks until user detaches)
-      if (hasAgentSession(workspace.id)) {
-        attachSession(workspace.id);
-        // Defer state update to next tick to ensure terminal is fully restored
-        setImmediate(() => {
-          setRenderKey(k => k + 1);
-        });
-      }
-    } catch (err) {
-      // Attachment failed - silent for now
-    }
-  };
-
-  const handleAttachTerminal = (workspace: Workspace) => {
-    try {
-      // Set as active workspace so cursor returns here after detach
-      setActiveWorkspaceId(workspace.id);
-
-      // Create session if it doesn't exist
-      if (!hasTerminalSession(workspace.id)) {
-        createTerminalSession(workspace.id, workspace.path);
-      }
-
-      // Attach to session (blocking)
-      attachTerminalSession(workspace.id);
-      // Defer state update to next tick to ensure terminal is fully restored
-      setImmediate(() => {
-        setRenderKey(k => k + 1);
-      });
-    } catch (err) {
-      // Attachment failed - silent for now
-    }
-  };
-
   const handleOpenDiffView = (workspace: Workspace) => {
     setDiffViewState({
       workspaceId: workspace.id,
@@ -136,9 +88,24 @@ function AppContent() {
   };
 
   const handleOpenWorkspaceView = (workspace: Workspace) => {
-    // Set as active workspace and attach to agent
-    setActiveWorkspaceId(workspace.id);
-    handleAttachAgent(workspace);
+    try {
+      // Set as active workspace
+      setActiveWorkspaceId(workspace.id);
+
+      // Create combined session if it doesn't exist
+      if (!hasCombinedSession(workspace.id)) {
+        createCombinedSession(workspace.id, workspace.path, workspace.agent);
+      }
+
+      // Attach to combined session (blocking)
+      attachCombinedSession(workspace.id);
+      // Defer state update to next tick to ensure terminal is fully restored
+      setImmediate(() => {
+        setRenderKey(k => k + 1);
+      });
+    } catch (err) {
+      // Attachment failed - silent for now
+    }
   };
 
   const handleDeleteWorkspace = (workspace: Workspace) => {
@@ -150,12 +117,15 @@ function AppContent() {
     if (!repoPath || !workspaceToDelete) return;
 
     try {
-      // Kill tmux sessions if they exist
+      // Kill all tmux sessions if they exist
       if (hasAgentSession(workspaceToDelete.id)) {
         killSession(workspaceToDelete.id);
       }
       if (hasTerminalSession(workspaceToDelete.id)) {
         killTerminalSession(workspaceToDelete.id);
+      }
+      if (hasCombinedSession(workspaceToDelete.id)) {
+        killCombinedSession(workspaceToDelete.id);
       }
 
       // Delete the workspace with specified options
@@ -232,8 +202,6 @@ function AppContent() {
       onCreateWorkspace={() => setScreen('create-workspace')}
       onSettings={() => setScreen('settings')}
       onOpenDiffView={handleOpenDiffView}
-      onAttachAgent={handleAttachAgent}
-      onAttachTerminal={handleAttachTerminal}
       onOpenWorkspaceView={handleOpenWorkspaceView}
       onDeleteWorkspace={handleDeleteWorkspace}
     />

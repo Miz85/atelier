@@ -13,8 +13,6 @@ interface WorkspaceTableProps {
   onCreateWorkspace: () => void;
   onSettings: () => void;
   onOpenDiffView: (workspace: Workspace) => void;
-  onAttachAgent: (workspace: Workspace) => void;
-  onAttachTerminal: (workspace: Workspace) => void;
   onOpenWorkspaceView: (workspace: Workspace) => void;
   onDeleteWorkspace: (workspace: Workspace) => void;
 }
@@ -23,8 +21,6 @@ export function WorkspaceTable({
   onCreateWorkspace,
   onSettings,
   onOpenDiffView,
-  onAttachAgent,
-  onAttachTerminal,
   onOpenWorkspaceView,
   onDeleteWorkspace,
 }: WorkspaceTableProps) {
@@ -97,21 +93,9 @@ export function WorkspaceTable({
 
     // Actions
     if (key.return) {
-      // Set as active and open workspace view
+      // Set as active and open combined workspace view (agent + terminal)
       setActiveWorkspaceId(selectedWorkspace.id);
       onOpenWorkspaceView(selectedWorkspace);
-      return;
-    }
-
-    if (input === 'a') {
-      // Attach to agent tmux session
-      onAttachAgent(selectedWorkspace);
-      return;
-    }
-
-    if (input === 't') {
-      // Attach to terminal tmux session
-      onAttachTerminal(selectedWorkspace);
       return;
     }
 
@@ -232,7 +216,7 @@ export function WorkspaceTable({
       <Box marginTop={1}>
         {selectedWorkspace ? (
           <Text color="white">
-            <Text color="cyan">Enter</Text>: open | <Text color="cyan">a</Text>: agent | <Text color="cyan">t</Text>: terminal | <Text color="cyan">d</Text>: diff | <Text color="cyan">x</Text>: delete | <Text color="cyan">n</Text>: new | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
+            <Text color="cyan">Enter</Text>: open (agent + terminal) | <Text color="cyan">d</Text>: diff | <Text color="cyan">x</Text>: delete | <Text color="cyan">n</Text>: new | <Text color="cyan">s</Text>: settings | <Text color="cyan">q</Text>: quit
           </Text>
         ) : (
           <Text color="white">

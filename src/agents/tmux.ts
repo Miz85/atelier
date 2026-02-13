@@ -387,3 +387,162 @@ export function killTerminalSession(workspaceId: string): void {
     }
   }
 }
+
+// ============================================================================
+// Combined Session Management (agent on left, terminal on right)
+// ============================================================================
+
+/**
+ * Generate a combined tmux session name from workspace ID.
+ * Combined sessions show agent and terminal side-by-side.
+ */
+export function combinedSessionName(workspaceId: string): string {
+  return `atelier-combined-${workspaceId}`;
+}
+
+/**
+ * Check if a combined tmux session exists.
+ */
+export function hasCombinedSession(workspaceId: string): boolean {
+  try {
+    execSync(`tmux has-session -t "${combinedSessionName(workspaceId)}" 2>/dev/null`, {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create a new combined tmux session for a workspace.
+ * Creates a session with two vertical panes: agent on left, terminal on right.
+ *
+ * @param workspaceId - Workspace identifier
+ * @param cwd - Working directory for the session
+ * @param agentCommand - Command to run in the left pane (e.g., "claude", "opencode")
+ */
+export function createCombinedSession(
+  workspaceId: string,
+  cwd: string,
+  agentCommand: string
+): void {
+  const name = combinedSessionName(workspaceId);
+
+  // Kill existing session if any
+  if (hasCombinedSession(workspaceId)) {
+    killCombinedSession(workspaceId);
+  }
+
+  // Create detached session with a shell (this will be the left pane - agent)
+  execSync(
+    `tmux new-session -d -s "${name}" -c "${cwd}"`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  // Split window vertically (creates right pane - terminal)
+  // -h: horizontal split (creates left/right panes)
+  // -t: target session
+  // -c: start directory for new pane
+  execSync(
+    `tmux split-window -h -t "${name}" -c "${cwd}"`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  // Select the left pane (pane 0) and send the agent command
+  execSync(
+    `tmux select-pane -t "${name}:0.0"`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  execSync(
+    `tmux send-keys -t "${name}:0.0" "${agentCommand}" Enter`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  // Keep focus on the left pane (agent)
+  execSync(
+    `tmux select-pane -t "${name}:0.0"`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+}
+
+/**
+ * Attach to a combined tmux session.
+ * This takes over the terminal until the user detaches (Ctrl+B D).
+ *
+ * @param workspaceId - Workspace identifier
+ */
+export function attachCombinedSession(workspaceId: string): void {
+  const name = combinedSessionName(workspaceId);
+
+  if (!hasCombinedSession(workspaceId)) {
+    throw new Error(`No combined tmux session for workspace: ${workspaceId}`);
+  }
+
+  // Save current stdin state
+  const wasRaw = process.stdin.isRaw;
+  const wasPaused = process.stdin.isPaused();
+
+  // Clear screen before attaching
+  process.stdout.write('\x1b[2J\x1b[H');
+
+  // Disable raw mode before tmux takes over (tmux will set its own modes)
+  if (process.stdin.isTTY && wasRaw) {
+    process.stdin.setRawMode(false);
+  }
+
+  // Use spawnSync to completely block Node while tmux has control
+  spawnSync('tmux', ['attach', '-t', name], {
+    stdio: 'inherit',
+  });
+
+  // Restore stdin state for Ink after detaching
+  if (process.stdin.isTTY) {
+    // Resume stdin first if it was flowing
+    if (!wasPaused) {
+      process.stdin.resume();
+    }
+
+    // Then restore raw mode
+    if (wasRaw) {
+      process.stdin.setRawMode(true);
+    }
+
+    // Drain any pending input to prevent stale keystrokes
+    process.stdin.read();
+  }
+
+  // Give terminal a moment to settle after tmux releases it
+  try {
+    execSync('sleep 0.1', { stdio: 'ignore' });
+  } catch {}
+
+  // Aggressive terminal reset to ensure clean state for Ink
+  process.stdout.write('\x1bc');        // Full terminal reset (ESC c)
+  process.stdout.write('\x1b[!p');      // Soft terminal reset
+  process.stdout.write('\x1b[?25h');    // Show cursor
+  process.stdout.write('\x1b[?1049l');  // Exit alternate screen (if tmux left us in it)
+  process.stdout.write('\x1b[2J\x1b[H'); // Clear screen and home cursor
+}
+
+/**
+ * Kill a combined tmux session.
+ *
+ * @param workspaceId - Workspace identifier
+ */
+export function killCombinedSession(workspaceId: string): void {
+  const name = combinedSessionName(workspaceId);
+
+  if (hasCombinedSession(workspaceId)) {
+    try {
+      execSync(`tmux kill-session -t "${name}"`, {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      });
+    } catch {
+      // Session may have already exited
+    }
+  }
+}
