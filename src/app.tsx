@@ -80,6 +80,9 @@ function AppContent() {
   // Handler functions
   const handleAttachAgent = (workspace: Workspace) => {
     try {
+      // Set as active workspace so cursor returns here after detach
+      setActiveWorkspaceId(workspace.id);
+
       // Check if agent is already running (use workspace ID to look up)
       const agentInstance = getAgentByWorkspace(workspace.id);
 
@@ -104,6 +107,9 @@ function AppContent() {
 
   const handleAttachTerminal = (workspace: Workspace) => {
     try {
+      // Set as active workspace so cursor returns here after detach
+      setActiveWorkspaceId(workspace.id);
+
       // Create session if it doesn't exist
       if (!hasTerminalSession(workspace.id)) {
         createTerminalSession(workspace.id, workspace.path);
