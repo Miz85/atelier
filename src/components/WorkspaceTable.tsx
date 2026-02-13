@@ -30,7 +30,24 @@ export function WorkspaceTable({
 }: WorkspaceTableProps) {
   const [workspaces] = useAtom(workspacesAtom);
   const [activeWorkspaceId, setActiveWorkspaceId] = useAtom(activeWorkspaceIdAtom);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  
+  // Initialize selectedIndex based on activeWorkspaceId
+  const getInitialIndex = () => {
+    if (!activeWorkspaceId) return 0;
+    const idx = workspaces.findIndex(w => w.id === activeWorkspaceId);
+    return idx >= 0 ? idx : 0;
+  };
+  const [selectedIndex, setSelectedIndex] = useState(getInitialIndex);
+
+  // Sync selectedIndex when activeWorkspaceId changes (e.g., after detaching from tmux)
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      const idx = workspaces.findIndex(w => w.id === activeWorkspaceId);
+      if (idx >= 0 && idx !== selectedIndex) {
+        setSelectedIndex(idx);
+      }
+    }
+  }, [activeWorkspaceId, workspaces]);
 
   // Ensure selected index is within bounds
   useEffect(() => {

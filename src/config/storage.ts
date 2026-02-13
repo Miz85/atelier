@@ -5,6 +5,14 @@ import * as os from 'node:os';
 import writeFileAtomic from 'write-file-atomic';
 
 /**
+ * Workspace metadata persisted separately from git worktrees.
+ * Keyed by worktree path to allow merging with git-synced workspaces.
+ */
+export interface WorkspaceMetadata {
+  agent: 'claude' | 'opencode';
+}
+
+/**
  * Custom storage adapter for Jotai's atomWithStorage in Node.js.
  * Uses write-file-atomic for safe persistence (prevents corruption on crash).
  */
@@ -93,4 +101,33 @@ export function createJotaiStorage<T>() {
       return () => {};
     },
   };
+}
+
+const WORKSPACE_METADATA_KEY = 'workspace-metadata';
+
+/**
+ * Get all saved workspace metadata.
+ * Returns a map of worktree path -> metadata.
+ */
+export function getWorkspaceMetadata(): Record<string, WorkspaceMetadata> {
+  return fsStorage.getItem(WORKSPACE_METADATA_KEY, {});
+}
+
+/**
+ * Save workspace metadata for a given path.
+ * Merges with existing metadata.
+ */
+export function saveWorkspaceMetadata(path: string, metadata: WorkspaceMetadata): void {
+  const existing = getWorkspaceMetadata();
+  existing[path] = metadata;
+  fsStorage.setItem(WORKSPACE_METADATA_KEY, existing);
+}
+
+/**
+ * Remove workspace metadata for a given path.
+ */
+export function removeWorkspaceMetadata(path: string): void {
+  const existing = getWorkspaceMetadata();
+  delete existing[path];
+  fsStorage.setItem(WORKSPACE_METADATA_KEY, existing);
 }

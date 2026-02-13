@@ -6,6 +6,7 @@ import { addWorktree, removeWorktree, deleteBranch, listWorktrees, type GitWorkt
 import { processRegistry } from '../processes/cleanup.js';
 import type { Workspace } from '../state/workspace.js';
 import type { Settings } from '../state/settings.js';
+import { saveWorkspaceMetadata, getWorkspaceMetadata, removeWorkspaceMetadata } from '../config/storage.js';
 
 export interface CreateWorkspaceOptions {
   repoPath: string;           // Path to the main git repository
@@ -64,6 +65,10 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
     lastActiveAt: now,
   };
 
+  // Persist workspace metadata (especially agent type) keyed by path
+  // This survives sync from git worktrees
+  saveWorkspaceMetadata(realWorktreePath, { agent });
+
   return workspace;
 }
 
@@ -120,6 +125,9 @@ export async function deleteWorkspace(
   if (options.deleteBranch) {
     await deleteBranch(repoPath, workspace.branch, true);
   }
+
+  // Clean up persisted metadata
+  removeWorkspaceMetadata(workspace.path);
 }
 
 /**
@@ -189,12 +197,17 @@ export function gitWorktreeToWorkspace(
 
   const now = new Date().toISOString();
 
+  // Check for persisted metadata (preserves agent choice across restarts)
+  const savedMetadata = getWorkspaceMetadata();
+  const metadata = savedMetadata[worktree.path];
+  const agent = metadata?.agent ?? settings.defaultAgent;
+
   return {
     id: nanoid(),
     name,
     path: worktree.path,
     branch: branchName,
-    agent: settings.defaultAgent,
+    agent,
     pid: undefined,
     createdAt: now,
     lastActiveAt: now,
