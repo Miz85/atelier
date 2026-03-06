@@ -3,6 +3,7 @@
 // Each workspace gets a dedicated tmux session.
 
 import { execSync, spawnSync } from 'node:child_process';
+import { platform } from 'node:os';
 
 /**
  * Check if tmux is available on the system.
@@ -27,6 +28,75 @@ export function checkTmuxAvailable(): void {
  */
 export function sessionName(workspaceId: string): string {
   return `atelier-${workspaceId}`;
+}
+
+/**
+ * Configure tmux session with mouse mode and clipboard integration.
+ * Sets up:
+ * - Mouse mode for scrolling and selection within panes
+ * - OSC 52 clipboard integration (works with modern terminals)
+ * - Copy-on-select behavior
+ * - Paste keybindings (Ctrl+V)
+ *
+ * @param name - The tmux session name to configure
+ */
+function configureSessionOptions(name: string): void {
+  const isMac = platform() === 'darwin';
+
+  // Enable mouse mode for scrolling and selection
+  execSync(
+    `tmux set-option -t "${name}" mouse on`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  // Enable OSC 52 clipboard integration
+  // This allows tmux to read/write system clipboard via terminal escape sequences
+  // Works with modern terminals: iTerm2, kitty, Alacritty, Windows Terminal, etc.
+  execSync(
+    `tmux set-option -t "${name}" set-clipboard on`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
+  // Determine the clipboard command based on OS
+  const copyCmd = isMac ? 'pbcopy' : 'xclip -selection clipboard';
+  const pasteCmd = isMac ? 'pbpaste' : 'xclip -selection clipboard -o';
+
+  // Check if clipboard command is available (for Linux)
+  let hasClipboardCmd = isMac;
+  if (!isMac) {
+    try {
+      execSync('which xclip', { encoding: 'utf-8', stdio: 'pipe' });
+      hasClipboardCmd = true;
+    } catch {
+      // xclip not available, will rely on OSC 52 only
+    }
+  }
+
+  if (hasClipboardCmd) {
+    // Set the copy command for tmux's built-in copy functionality
+    execSync(
+      `tmux set-option -t "${name}" copy-command "${copyCmd}"`,
+      { encoding: 'utf-8', stdio: 'pipe' }
+    );
+
+    // Configure copy mode: when mouse drag ends, copy to clipboard automatically
+    // This binds to both emacs (copy-mode) and vi (copy-mode-vi) styles
+    execSync(
+      `tmux bind-key -T copy-mode MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "${copyCmd}"`,
+      { encoding: 'utf-8', stdio: 'pipe' }
+    );
+    execSync(
+      `tmux bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "${copyCmd}"`,
+      { encoding: 'utf-8', stdio: 'pipe' }
+    );
+
+    // Bind Ctrl+V to paste from system clipboard
+    // Note: Cmd+V on macOS is handled by the terminal emulator directly
+    execSync(
+      `tmux bind-key -n C-v run-shell "${pasteCmd} | tmux load-buffer - && tmux paste-buffer"`,
+      { encoding: 'utf-8', stdio: 'pipe' }
+    );
+  }
 }
 
 /**
@@ -72,12 +142,8 @@ export function createSession(
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
-  // Enable mouse mode for this session
-  // This allows scrolling within the pane and proper text selection
-  execSync(
-    `tmux set-option -t "${name}" -g mouse on`,
-    { encoding: 'utf-8', stdio: 'pipe' }
-  );
+  // Configure mouse mode and clipboard integration
+  configureSessionOptions(name);
 
   // Send the agent command to the shell
   // Small delay to ensure shell is ready
@@ -315,12 +381,8 @@ export function createTerminalSession(
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
-  // Enable mouse mode for this session
-  // This allows scrolling within the pane and proper text selection
-  execSync(
-    `tmux set-option -t "${name}" -g mouse on`,
-    { encoding: 'utf-8', stdio: 'pipe' }
-  );
+  // Configure mouse mode and clipboard integration
+  configureSessionOptions(name);
 }
 
 /**
@@ -455,12 +517,8 @@ export function createCombinedSession(
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
-  // Enable mouse mode for this session
-  // This allows scrolling within panes and text selection confined to each pane
-  execSync(
-    `tmux set-option -t "${name}" -g mouse on`,
-    { encoding: 'utf-8', stdio: 'pipe' }
-  );
+  // Configure mouse mode and clipboard integration
+  configureSessionOptions(name);
 
   // Split window vertically (creates right pane - terminal)
   // -h: horizontal split (creates left/right panes)
