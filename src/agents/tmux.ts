@@ -72,6 +72,13 @@ export function createSession(
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
+  // Enable mouse mode for this session
+  // This allows scrolling within the pane and proper text selection
+  execSync(
+    `tmux set-option -t "${name}" -g mouse on`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
   // Send the agent command to the shell
   // Small delay to ensure shell is ready
   execSync(
@@ -307,6 +314,13 @@ export function createTerminalSession(
     `tmux new-session -d -s "${name}" -c "${cwd}"`,
     { encoding: 'utf-8', stdio: 'pipe' }
   );
+
+  // Enable mouse mode for this session
+  // This allows scrolling within the pane and proper text selection
+  execSync(
+    `tmux set-option -t "${name}" -g mouse on`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
 }
 
 /**
@@ -417,7 +431,7 @@ export function hasCombinedSession(workspaceId: string): boolean {
 
 /**
  * Create a new combined tmux session for a workspace.
- * Creates a session with two vertical panes: agent on left, terminal on right.
+ * Creates a session with two vertical panes: agent on left (70%), terminal on right (30%).
  *
  * @param workspaceId - Workspace identifier
  * @param cwd - Working directory for the session
@@ -441,12 +455,20 @@ export function createCombinedSession(
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
+  // Enable mouse mode for this session
+  // This allows scrolling within panes and text selection confined to each pane
+  execSync(
+    `tmux set-option -t "${name}" -g mouse on`,
+    { encoding: 'utf-8', stdio: 'pipe' }
+  );
+
   // Split window vertically (creates right pane - terminal)
   // -h: horizontal split (creates left/right panes)
   // -t: target session
   // -c: start directory for new pane
+  // -p 30: right pane gets 30% of the width, left pane keeps 70%
   execSync(
-    `tmux split-window -h -t "${name}" -c "${cwd}"`,
+    `tmux split-window -h -t "${name}" -c "${cwd}" -p 30`,
     { encoding: 'utf-8', stdio: 'pipe' }
   );
 
